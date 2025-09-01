@@ -1,0 +1,14 @@
+# Code owners for cxusage repository
+# These users are automatically requested for review when someone opens a pull request
+
+# Global ownership - johanneserhardt owns all files
+* @johanneserhardt
+
+# Specific critical files require explicit approval
+/.github/ @johanneserhardt
+/releases/ @johanneserhardt
+/scripts/ @johanneserhardt
+/go.mod @johanneserhardt
+/README.md @johanneserhardt
+/CONTRIBUTING.md @johanneserhardt
+/LICENSE @johanneserhardt

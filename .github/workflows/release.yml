@@ -1,12 +1,12 @@
-name: Release Published
+name: Auto Release on Tag
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - 'v*.*.*'  # Only trigger on semantic version tags
 
 jobs:
-  build_and_release:
+  auto_release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,83 +17,106 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if associated release is a pre-release
-        id: check_prerelease
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Validate tag format and permissions
+        id: validate_tag
         run: |
-          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-          "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.event.release.tag_name }}")
-          prerelease=$(echo "$response" | jq '.prerelease')
-          echo "prerelease=$prerelease" >> $GITHUB_OUTPUT
-
-      - name: Check if tag matches pattern
-        id: check_tag_pattern
-        run: |
-          if [[ "${{ github.event.release.tag_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "match=true" >> $GITHUB_OUTPUT
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          
+          # Check if tag creator is the repository owner
+          if [[ "${{ github.actor }}" != "${{ secrets.RELEASE_AUTHOR }}" ]]; then
+            echo "❌ Only @${{ secrets.RELEASE_AUTHOR }} can create release tags"
+            echo "Tag creator: ${{ github.actor }}"
+            exit 1
+          fi
+          
+          # Check tag format
+          if [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "valid=true" >> $GITHUB_OUTPUT
+            echo "✅ Valid tag format: ${TAG_NAME}"
+            echo "✅ Authorized user: ${{ github.actor }}"
           else
-            echo "match=false" >> $GITHUB_OUTPUT
+            echo "valid=false" >> $GITHUB_OUTPUT
+            echo "❌ Invalid tag format: ${TAG_NAME}"
+            echo "Expected format: v1.2.3"
+            exit 1
           fi
 
-      - name: Set tag name as env variable
-        run: echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+      - name: Check for release notes file
+        id: check_notes
+        run: |
+          NOTES_FILE="releases/${TAG_NAME}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "notes_exist=true" >> $GITHUB_OUTPUT
+            echo "notes_file=${NOTES_FILE}" >> $GITHUB_OUTPUT
+            echo "✅ Found release notes: ${NOTES_FILE}"
+          else
+            echo "notes_exist=false" >> $GITHUB_OUTPUT
+            echo "❌ Release notes not found: ${NOTES_FILE}"
+            echo "Please create ${NOTES_FILE} before pushing the tag"
+            exit 1
+          fi
 
       - name: Setup Go
-        if: steps.check_tag_pattern.outputs.match == 'true'
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
 
-      - name: Set version variables (aligned with build script)
-        if: steps.check_tag_pattern.outputs.match == 'true'
+      - name: Set version variables
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         run: |
-          # Use tag name as version (like build script with VERSION env var)
-          echo "VERSION=${{ env.TAG_NAME }}" >> $GITHUB_ENV
+          echo "VERSION=${TAG_NAME}" >> $GITHUB_ENV
           echo "BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
           echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           
-          echo "Building cxusage ${{ env.TAG_NAME }}"
+          echo "🚀 Auto-releasing cxusage ${TAG_NAME}"
           echo "Build time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "Git commit: $(git rev-parse --short HEAD)"
 
       - name: Build Cross-Platform Binaries
-        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         run: |
-          # Create release directory
           mkdir -p release
           
-          # Use same ldflags pattern as build script
           LDFLAGS="-X 'github.com/johanneserhardt/cxusage/internal/commands.Version=${VERSION}' -X 'github.com/johanneserhardt/cxusage/internal/commands.BuildTime=${BUILD_TIME}' -X 'github.com/johanneserhardt/cxusage/internal/commands.GitCommit=${GIT_COMMIT}'"
           
-          # Build for different platforms
-          echo "Building Linux AMD64..."
+          echo "🔨 Building binaries..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-amd64 ./cmd/cxusage
-          
-          echo "Building Linux ARM64..."
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-arm64 ./cmd/cxusage
-          
-          echo "Building macOS AMD64..."
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-amd64 ./cmd/cxusage
-          
-          echo "Building macOS ARM64..."
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-arm64 ./cmd/cxusage
-          
-          echo "Building Windows AMD64..."
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-windows-amd64.exe ./cmd/cxusage
           
-          echo "Build completed successfully!"
+          echo "✅ Build completed!"
           ls -la release/
 
-      - name: Upload Release Assets
-        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            release/cxusage-linux-amd64
-            release/cxusage-linux-arm64
-            release/cxusage-darwin-amd64
-            release/cxusage-darwin-arm64
+      - name: Extract release title from notes
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
+        id: extract_title
+        run: |
+          # Extract title from first line of release notes (after # )
+          TITLE=$(head -n 1 ${{ steps.check_notes.outputs.notes_file }} | sed 's/^# //')
+          echo "title=${TITLE}" >> $GITHUB_OUTPUT
+          echo "📝 Release title: ${TITLE}"
+
+      - name: Create GitHub Release
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
+        run: |
+          echo "🎉 Creating GitHub release..."
+          
+          # Create release with notes from file and upload binaries
+          gh release create "${TAG_NAME}" \
+            --title "${{ steps.extract_title.outputs.title }}" \
+            --notes-file "${{ steps.check_notes.outputs.notes_file }}" \
+            --latest \
+            release/cxusage-linux-amd64 \
+            release/cxusage-linux-arm64 \
+            release/cxusage-darwin-amd64 \
+            release/cxusage-darwin-arm64 \
             release/cxusage-windows-amd64.exe
+          
+          echo "✅ Release created successfully!"
+          echo "🔗 View at: https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
