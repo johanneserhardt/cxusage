@@ -209,7 +209,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Inspired by [ccusage](https://github.com/ryoppippi/ccusage) for Claude Code by @ryoppippi
+- Inspired by [ccusage](https://github.com/ryoppippi/ccusage) for Claude Code by [@ryoppippi](https://github.com/ryoppippi)
 - Built with [Cobra](https://github.com/spf13/cobra) CLI framework
 - Uses [tablewriter](https://github.com/olekukonko/tablewriter) for beautiful tables
 - Colors powered by [fatih/color](https://github.com/fatih/color)
