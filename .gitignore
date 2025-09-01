@@ -17,8 +17,8 @@
 # Go workspace file
 go.work
 
-# Build artifacts
-cxusage
+# Build artifacts  
+/cxusage
 dist/
 build/
 
