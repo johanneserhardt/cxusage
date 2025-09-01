@@ -1,0 +1,106 @@
+name: Release Published
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if associated release is a pre-release
+        id: check_prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.event.release.tag_name }}")
+          prerelease=$(echo "$response" | jq '.prerelease')
+          echo "prerelease=$prerelease" >> $GITHUB_OUTPUT
+
+      - name: Check if tag matches pattern
+        id: check_tag_pattern
+        run: |
+          if [[ "${{ github.event.release.tag_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "match=true" >> $GITHUB_OUTPUT
+          else
+            echo "match=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set tag name as env variable
+        run: echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+
+      - name: Setup Go
+        if: steps.check_tag_pattern.outputs.match == 'true'
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Set version variables (aligned with build script)
+        if: steps.check_tag_pattern.outputs.match == 'true'
+        run: |
+          # Use tag name as version (like build script with VERSION env var)
+          echo "VERSION=${{ env.TAG_NAME }}" >> $GITHUB_ENV
+          echo "BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          
+          echo "Building cxusage ${{ env.TAG_NAME }}"
+          echo "Build time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Git commit: $(git rev-parse --short HEAD)"
+
+      - name: Build Cross-Platform Binaries
+        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        run: |
+          # Create release directory
+          mkdir -p release
+          
+          # Use same ldflags pattern as build script
+          LDFLAGS="-X 'github.com/johanneserhardt/cxusage/internal/commands.Version=${VERSION}' -X 'github.com/johanneserhardt/cxusage/internal/commands.BuildTime=${BUILD_TIME}' -X 'github.com/johanneserhardt/cxusage/internal/commands.GitCommit=${GIT_COMMIT}'"
+          
+          # Build for different platforms
+          echo "Building Linux AMD64..."
+          GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-amd64 ./cmd/cxusage
+          
+          echo "Building Linux ARM64..."
+          GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-arm64 ./cmd/cxusage
+          
+          echo "Building macOS AMD64..."
+          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-amd64 ./cmd/cxusage
+          
+          echo "Building macOS ARM64..."
+          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-arm64 ./cmd/cxusage
+          
+          echo "Building Windows AMD64..."
+          GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-windows-amd64.exe ./cmd/cxusage
+          
+          echo "Build completed successfully!"
+          ls -la release/
+
+      - name: Upload Release Assets
+        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./release/
+          asset_name: cxusage-binaries
+          asset_content_type: application/octet-stream
+
+      - name: Upload Individual Binaries
+        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        run: |
+          for file in release/*; do
+            filename=$(basename "$file")
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Content-Type: application/octet-stream" \
+                 --data-binary @"$file" \
+                 "${{ github.event.release.upload_url }}?name=$filename"
+          done
