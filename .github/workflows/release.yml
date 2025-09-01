@@ -1,9 +1,9 @@
-name: Auto Release on Tag
+name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'  # Only trigger on semantic version tags
+      - "v*.*.*" # Only trigger on semantic version tags
 
 jobs:
   auto_release:
@@ -22,14 +22,14 @@ jobs:
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
-          
+
           # Check if tag creator is the repository owner
           if [[ "${{ github.actor }}" != "${{ secrets.RELEASE_AUTHOR }}" ]]; then
             echo "❌ Only @${{ secrets.RELEASE_AUTHOR }} can create release tags"
             echo "Tag creator: ${{ github.actor }}"
             exit 1
           fi
-          
+
           # Check tag format
           if [[ "${TAG_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "valid=true" >> $GITHUB_OUTPUT
@@ -61,7 +61,7 @@ jobs:
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Set version variables
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
@@ -69,7 +69,7 @@ jobs:
           echo "VERSION=${TAG_NAME}" >> $GITHUB_ENV
           echo "BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
           echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          
+
           echo "🚀 Auto-releasing cxusage ${TAG_NAME}"
           echo "Build time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "Git commit: $(git rev-parse --short HEAD)"
@@ -78,36 +78,27 @@ jobs:
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         run: |
           mkdir -p release
-          
+
           LDFLAGS="-X 'github.com/johanneserhardt/cxusage/internal/commands.Version=${VERSION}' -X 'github.com/johanneserhardt/cxusage/internal/commands.BuildTime=${BUILD_TIME}' -X 'github.com/johanneserhardt/cxusage/internal/commands.GitCommit=${GIT_COMMIT}'"
-          
+
           echo "🔨 Building binaries..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-amd64 ./cmd/cxusage
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-arm64 ./cmd/cxusage
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-amd64 ./cmd/cxusage
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-arm64 ./cmd/cxusage
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-windows-amd64.exe ./cmd/cxusage
-          
+
           echo "✅ Build completed!"
           ls -la release/
-
-      - name: Extract release title from notes
-        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
-        id: extract_title
-        run: |
-          # Extract title from first line of release notes (after # )
-          TITLE=$(head -n 1 ${{ steps.check_notes.outputs.notes_file }} | sed 's/^# //')
-          echo "title=${TITLE}" >> $GITHUB_OUTPUT
-          echo "📝 Release title: ${TITLE}"
 
       - name: Create GitHub Release
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         run: |
           echo "🎉 Creating GitHub release..."
-          
-          # Create release with notes from file and upload binaries
+
+          # Create release with tag as title and notes from file
           gh release create "${TAG_NAME}" \
-            --title "${{ steps.extract_title.outputs.title }}" \
+            --title "${TAG_NAME}" \
             --notes-file "${{ steps.check_notes.outputs.notes_file }}" \
             --latest \
             release/cxusage-linux-amd64 \
@@ -115,7 +106,7 @@ jobs:
             release/cxusage-darwin-amd64 \
             release/cxusage-darwin-arm64 \
             release/cxusage-windows-amd64.exe
-          
+
           echo "✅ Release created successfully!"
           echo "🔗 View at: https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
         env:
