@@ -98,24 +98,57 @@ jobs:
           echo "Build completed successfully!"
           ls -la release/
 
-      - name: Upload Release Assets
+      - name: Upload Linux AMD64 Binary
         if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/
-          asset_name: cxusage-binaries
+          asset_path: ./release/cxusage-linux-amd64
+          asset_name: cxusage-linux-amd64
           asset_content_type: application/octet-stream
 
-      - name: Upload Individual Binaries
+      - name: Upload Linux ARM64 Binary
         if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        run: |
-          for file in release/*; do
-            filename=$(basename "$file")
-            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Content-Type: application/octet-stream" \
-                 --data-binary @"$file" \
-                 "${{ github.event.release.upload_url }}?name=$filename"
-          done
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./release/cxusage-linux-arm64
+          asset_name: cxusage-linux-arm64
+          asset_content_type: application/octet-stream
+
+      - name: Upload macOS AMD64 Binary
+        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./release/cxusage-darwin-amd64
+          asset_name: cxusage-darwin-amd64
+          asset_content_type: application/octet-stream
+
+      - name: Upload macOS ARM64 Binary
+        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./release/cxusage-darwin-arm64
+          asset_name: cxusage-darwin-arm64
+          asset_content_type: application/octet-stream
+
+      - name: Upload Windows AMD64 Binary
+        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./release/cxusage-windows-amd64.exe
+          asset_name: cxusage-windows-amd64.exe
+          asset_content_type: application/octet-stream
