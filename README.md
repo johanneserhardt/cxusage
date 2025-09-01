@@ -216,4 +216,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ for the Codex CLI community**
+**Made with ❤️ for the OpenAI community**
