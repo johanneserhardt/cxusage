@@ -39,12 +39,32 @@ cxusage blocks --live
 
 ## 📦 Installation
 
-### Quick Install (Recommended)
+### 🚀 Download Binary (Recommended)
+Download the latest pre-built binary for your platform:
+
+**[📥 Download from GitHub Releases](https://github.com/johanneserhardt/cxusage/releases/latest)**
+
+Available for:
+- **Linux** (AMD64, ARM64)  
+- **macOS** (Intel, Apple Silicon)
+- **Windows** (AMD64)
+
+After download:
+```bash
+# Make executable (Linux/macOS)
+chmod +x cxusage-*
+sudo mv cxusage-* /usr/local/bin/cxusage
+
+# Or add to your PATH
+mv cxusage-* ~/bin/cxusage  # if ~/bin is in PATH
+```
+
+### 🛠️ Alternative: Go Install
 ```bash
 go install github.com/johanneserhardt/cxusage/cmd/cxusage@latest
 ```
 
-### Build from Source
+### 🔨 Build from Source
 ```bash
 git clone https://github.com/johanneserhardt/cxusage
 cd cxusage
@@ -55,12 +75,6 @@ cd cxusage
 # Or just build
 ./scripts/build.sh
 ```
-
-The install script will:
-- Build the binary automatically
-- Install to the best location (`/usr/local/bin`, `~/bin`, or `~/.local/bin`)
-- Check if it's in your PATH
-- Test the installation
 
 ## ⚙️ Configuration
 

@@ -61,24 +61,39 @@ jobs:
           # Create release directory
           mkdir -p release
           
+          # Debug: Check directory structure
+          echo "Current directory:"
+          pwd
+          echo "Contents:"
+          ls -la
+          echo "cmd directory:"
+          ls -la cmd/
+          echo "Go module:"
+          cat go.mod
+          
           # Use same ldflags pattern as build script
           LDFLAGS="-X 'github.com/johanneserhardt/cxusage/internal/commands.Version=${VERSION}' -X 'github.com/johanneserhardt/cxusage/internal/commands.BuildTime=${BUILD_TIME}' -X 'github.com/johanneserhardt/cxusage/internal/commands.GitCommit=${GIT_COMMIT}'"
           
+          # Test local build first
+          echo "Testing local build..."
+          go build -ldflags "$LDFLAGS" -o test-binary ./cmd/cxusage
+          ./test-binary version
+          
           # Build for different platforms
           echo "Building Linux AMD64..."
-          GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-amd64 ./cmd/cxusage
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-amd64 ./cmd/cxusage
           
           echo "Building Linux ARM64..."
-          GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-arm64 ./cmd/cxusage
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-linux-arm64 ./cmd/cxusage
           
           echo "Building macOS AMD64..."
-          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-amd64 ./cmd/cxusage
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-amd64 ./cmd/cxusage
           
           echo "Building macOS ARM64..."
-          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-arm64 ./cmd/cxusage
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o release/cxusage-darwin-arm64 ./cmd/cxusage
           
           echo "Building Windows AMD64..."
-          GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-windows-amd64.exe ./cmd/cxusage
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/cxusage-windows-amd64.exe ./cmd/cxusage
           
           echo "Build completed successfully!"
           ls -la release/
