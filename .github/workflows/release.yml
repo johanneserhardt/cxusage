@@ -8,6 +8,8 @@ on:
 jobs:
   build_and_release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Check out code
@@ -61,23 +63,8 @@ jobs:
           # Create release directory
           mkdir -p release
           
-          # Debug: Check directory structure
-          echo "Current directory:"
-          pwd
-          echo "Contents:"
-          ls -la
-          echo "cmd directory:"
-          ls -la cmd/
-          echo "Go module:"
-          cat go.mod
-          
           # Use same ldflags pattern as build script
           LDFLAGS="-X 'github.com/johanneserhardt/cxusage/internal/commands.Version=${VERSION}' -X 'github.com/johanneserhardt/cxusage/internal/commands.BuildTime=${BUILD_TIME}' -X 'github.com/johanneserhardt/cxusage/internal/commands.GitCommit=${GIT_COMMIT}'"
-          
-          # Test local build first
-          echo "Testing local build..."
-          go build -ldflags "$LDFLAGS" -o test-binary ./cmd/cxusage
-          ./test-binary version
           
           # Build for different platforms
           echo "Building Linux AMD64..."
@@ -98,57 +85,15 @@ jobs:
           echo "Build completed successfully!"
           ls -la release/
 
-      - name: Upload Linux AMD64 Binary
+      - name: Upload Release Assets
         if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/cxusage-linux-amd64
+            release/cxusage-linux-arm64
+            release/cxusage-darwin-amd64
+            release/cxusage-darwin-arm64
+            release/cxusage-windows-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/cxusage-linux-amd64
-          asset_name: cxusage-linux-amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux ARM64 Binary
-        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/cxusage-linux-arm64
-          asset_name: cxusage-linux-arm64
-          asset_content_type: application/octet-stream
-
-      - name: Upload macOS AMD64 Binary
-        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/cxusage-darwin-amd64
-          asset_name: cxusage-darwin-amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload macOS ARM64 Binary
-        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/cxusage-darwin-arm64
-          asset_name: cxusage-darwin-arm64
-          asset_content_type: application/octet-stream
-
-      - name: Upload Windows AMD64 Binary
-        if: ${{ steps.check_prerelease.outputs.prerelease == 'false' && steps.check_tag_pattern.outputs.match == 'true' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/cxusage-windows-amd64.exe
-          asset_name: cxusage-windows-amd64.exe
-          asset_content_type: application/octet-stream
