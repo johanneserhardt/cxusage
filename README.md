@@ -39,17 +39,28 @@ cxusage blocks --live
 
 ## 📦 Installation
 
+### Quick Install (Recommended)
 ```bash
 go install github.com/johanneserhardt/cxusage/cmd/cxusage@latest
 ```
 
-Or build from source:
-
+### Build from Source
 ```bash
 git clone https://github.com/johanneserhardt/cxusage
 cd cxusage
+
+# Build and install automatically
+./scripts/install.sh
+
+# Or just build
 ./scripts/build.sh
 ```
+
+The install script will:
+- Build the binary automatically
+- Install to the best location (`/usr/local/bin`, `~/bin`, or `~/.local/bin`)
+- Check if it's in your PATH
+- Test the installation
 
 ## ⚙️ Configuration
 
