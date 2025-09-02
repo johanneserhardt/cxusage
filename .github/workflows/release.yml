@@ -181,6 +181,9 @@ jobs:
 
           # Upload formula to the release so users can brew install via a URL
           gh release upload "$TAG_NAME" cxusage.rb --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Homebrew Tap
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
