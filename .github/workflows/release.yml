@@ -187,13 +187,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Homebrew Tap
-        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true' && secrets.TAP_GITHUB_TOKEN != ''
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         env:
           TAP_OWNER: johanneserhardt
           TAP_REPO: homebrew-tap
           TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+
+          # Check if TAP_TOKEN is available
+          if [[ -z "$TAP_TOKEN" ]]; then
+            echo "⚠️ TAP_GITHUB_TOKEN not configured, skipping tap update"
+            echo "💡 Add TAP_GITHUB_TOKEN secret to enable automatic tap publishing"
+            exit 0
+          fi
 
           TAG_NAME=${GITHUB_REF#refs/tags/}
           FORMULA_NAME="cxusage"
