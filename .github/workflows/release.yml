@@ -111,6 +111,7 @@ jobs:
           echo "🔗 View at: https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate and upload Homebrew formula (optional install via brew)
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
@@ -265,3 +266,4 @@ jobs:
           rm -rf "$workdir"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
