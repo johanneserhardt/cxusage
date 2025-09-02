@@ -131,11 +131,11 @@ jobs:
           SHA_LINUX_AMD64=$(shasum -a 256 cxusage-linux-amd64  | awk '{print $1}')
           SHA_LINUX_ARM64=$(shasum -a 256 cxusage-linux-arm64  | awk '{print $1}')
 
-          cat > cxusage.rb <<RUBY
+          cat > cxusage.rb.tmpl <<'RUBY'
           class Cxusage < Formula
             desc "Codex CLI usage tracker with live dashboard"
             homepage "https://github.com/${REPO}"
-            version "${TAG_NAME#v}"
+            version "${VERSION_STR}"
             license "MIT"
 
             on_macos do
@@ -161,18 +161,22 @@ jobs:
             end
 
             def install
-              # Installed artifact is a single binary; install and provide short alias 'cx'
               bin.install Dir["cxusage-*"][0] => "cxusage"
               bin.install_symlink bin/"cxusage" => "cx"
             end
 
             test do
-              system "
-                \\#{bin}/cxusage
-              ", "version"
+              system "#{bin}/cxusage", "version"
             end
           end
 RUBY
+
+          VERSION_STR=${TAG_NAME#v}
+          env \
+            REPO="$REPO" TAG_NAME="$TAG_NAME" VERSION_STR="$VERSION_STR" \
+            SHA_DARWIN_AMD64="$SHA_DARWIN_AMD64" SHA_DARWIN_ARM64="$SHA_DARWIN_ARM64" \
+            SHA_LINUX_AMD64="$SHA_LINUX_AMD64" SHA_LINUX_ARM64="$SHA_LINUX_ARM64" \
+            envsubst < cxusage.rb.tmpl > cxusage.rb
 
           # Upload formula to the release so users can brew install via a URL
           gh release upload "$TAG_NAME" cxusage.rb --clobber
@@ -181,64 +185,71 @@ RUBY
         if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
         run: |
           set -euo pipefail
-          
+
           TAG_NAME=${GITHUB_REF#refs/tags/}
           TAP_OWNER="johanneserhardt"
           TAP_REPO="homebrew-tap"
           FORMULA_NAME="cxusage"
-          
+
           # Create temporary directory
           workdir=$(mktemp -d)
           cd "$workdir"
-          
+
           echo "📥 Cloning tap repository: ${TAP_OWNER}/${TAP_REPO}"
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${TAP_OWNER}/${TAP_REPO}.git" tap
           mkdir -p tap/Formula
-          
+
           # Use already computed checksums from previous step
           FORMULA_PATH="tap/Formula/${FORMULA_NAME}.rb"
           VERSION_STR="${TAG_NAME#v}"
-          
-          cat > "${FORMULA_PATH}" <<RUBY
-class ${FORMULA_NAME^} < Formula
-  desc "Codex CLI usage tracker with live dashboard"
-  homepage "https://github.com/${{ github.repository }}"
-  version "${VERSION_STR}"
-  license "MIT"
 
-  on_macos do
-    on_intel do
-      url "https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${FORMULA_NAME}-darwin-amd64", :using => :nounzip
-      sha256 "${SHA_DARWIN_AMD64}"
-    end
-    on_arm do
-      url "https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${FORMULA_NAME}-darwin-arm64", :using => :nounzip
-      sha256 "${SHA_DARWIN_ARM64}"
-    end
-  end
+          cat > "${FORMULA_PATH}.tmpl" <<'RUBY'
+          class CXFORMULA < Formula
+            desc "Codex CLI usage tracker with live dashboard"
+            homepage "https://github.com/${REPO}"
+            version "${VERSION_STR}"
+            license "MIT"
 
-  on_linux do
-    on_intel do
-      url "https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${FORMULA_NAME}-linux-amd64", :using => :nounzip
-      sha256 "${SHA_LINUX_AMD64}"
-    end
-    on_arm do
-      url "https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${FORMULA_NAME}-linux-arm64", :using => :nounzip
-      sha256 "${SHA_LINUX_ARM64}"
-    end
-  end
+            on_macos do
+              on_intel do
+              url "https://github.com/${REPO}/releases/download/${TAG_NAME}/${FORMULA_NAME}-darwin-amd64", :using => :nounzip
+              sha256 "${SHA_DARWIN_AMD64}"
+              end
+              on_arm do
+              url "https://github.com/${REPO}/releases/download/${TAG_NAME}/${FORMULA_NAME}-darwin-arm64", :using => :nounzip
+              sha256 "${SHA_DARWIN_ARM64}"
+              end
+            end
 
-  def install
-    bin.install Dir["${FORMULA_NAME}-*"][0] => "${FORMULA_NAME}"
-    bin.install_symlink bin/"${FORMULA_NAME}" => "cx"
-  end
+            on_linux do
+              on_intel do
+              url "https://github.com/${REPO}/releases/download/${TAG_NAME}/${FORMULA_NAME}-linux-amd64", :using => :nounzip
+              sha256 "${SHA_LINUX_AMD64}"
+              end
+              on_arm do
+              url "https://github.com/${REPO}/releases/download/${TAG_NAME}/${FORMULA_NAME}-linux-arm64", :using => :nounzip
+              sha256 "${SHA_LINUX_ARM64}"
+              end
+            end
 
-  test do
-    system "#{bin}/${FORMULA_NAME}", "version"
-  end
-end
+            def install
+            bin.install Dir["${FORMULA_NAME}-*"][0] => "${FORMULA_NAME}"
+            bin.install_symlink bin/"${FORMULA_NAME}" => "cx"
+            end
+
+            test do
+            system "#{bin}/${FORMULA_NAME}", "version"
+            end
+          end
 RUBY
-          
+
+          REPO="${{ github.repository }}"
+          env REPO="$REPO" TAG_NAME="$TAG_NAME" VERSION_STR="$VERSION_STR" \
+            FORMULA_NAME="$FORMULA_NAME" \
+            SHA_DARWIN_AMD64="$SHA_DARWIN_AMD64" SHA_DARWIN_ARM64="$SHA_DARWIN_ARM64" \
+            SHA_LINUX_AMD64="$SHA_LINUX_AMD64" SHA_LINUX_ARM64="$SHA_LINUX_ARM64" \
+            envsubst < "${FORMULA_PATH}.tmpl" | sed "s/CXFORMULA/${FORMULA_NAME^}/g" > "${FORMULA_PATH}"
+
           # Commit and push to tap repository
           cd tap
           git config user.name "github-actions[bot]"
@@ -246,10 +257,10 @@ RUBY
           git add "Formula/${FORMULA_NAME}.rb"
           git commit -m "${FORMULA_NAME} ${TAG_NAME}"
           git push
-          
+
           echo "✅ Updated Homebrew tap: ${TAP_OWNER}/${TAP_REPO}"
           echo "👉 Users can now: brew tap ${TAP_OWNER}/tap && brew install ${FORMULA_NAME}"
-          
+
           # Cleanup
           rm -rf "$workdir"
         env:
