@@ -1,12 +1,15 @@
 package utils
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
+    "fmt"
+    "os"
+    "strconv"
+    "strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/johanneserhardt/cxusage/internal/types"
+    "github.com/charmbracelet/lipgloss"
+    xterm "github.com/charmbracelet/x/term"
+    runewidth "github.com/mattn/go-runewidth"
+    "github.com/johanneserhardt/cxusage/internal/types"
 )
 
 // Table styles for proper table formatting like ccusage
@@ -37,12 +40,25 @@ var (
 		Padding(0, 1).
 		Align(lipgloss.Right)
 	
-	tableTotalStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(warningColor).
-		Padding(0, 1).
-		Align(lipgloss.Left)
+    tableTotalStyle = lipgloss.NewStyle().
+        Bold(true).
+        Foreground(warningColor).
+        Padding(0, 1).
+        Align(lipgloss.Left)
 )
+
+// Global compact mode toggle, set via CLI flag
+var compactMode bool
+var widthOverride int
+
+// SetCompactMode sets whether tables should use compact minimum widths
+func SetCompactMode(b bool) { compactMode = b }
+
+// isCompact reports whether compact mode is enabled
+func isCompact() bool { return compactMode }
+
+// SetWidthOverride sets a fixed table width (overrides terminal detection)
+func SetWidthOverride(w int) { widthOverride = w }
 
 // CreateTable creates a proper table structure like ccusage
 func CreateTable(headers []string, rows [][]string, widths []int) string {
@@ -103,6 +119,74 @@ func CreateTable(headers []string, rows [][]string, widths []int) string {
 	return result.String()
 }
 
+// getTerminalWidth returns the terminal width or a reasonable default
+func getTerminalWidth() int {
+    if widthOverride > 0 {
+        return widthOverride
+    }
+    if w, _, err := xterm.GetSize(uintptr(os.Stdout.Fd())); err == nil && w > 0 {
+        return w
+    }
+    // Fallback to common width if not attached to a TTY
+    return 120
+}
+
+// computeAutoWidths calculates column widths based on content and terminal width
+func computeAutoWidths(headers []string, rows [][]string, min []int) []int {
+    n := len(headers)
+    widths := make([]int, n)
+    // Seed with header width
+    for i := 0; i < n; i++ {
+        w := runewidth.StringWidth(headers[i])
+        if w < min[i] {
+            w = min[i]
+        }
+        widths[i] = w
+    }
+    // Grow with row content
+    for _, row := range rows {
+        for i := 0; i < n && i < len(row); i++ {
+            w := runewidth.StringWidth(row[i])
+            if w > widths[i] {
+                widths[i] = w
+            }
+        }
+    }
+
+    // Calculate target max internal width between table corners
+    termWidth := getTerminalWidth()
+    // Between corners we have sum(width+2) + (n-1) separators
+    target := termWidth - 2
+    current := 0
+    for _, w := range widths {
+        current += w + 2
+    }
+    current += (n - 1)
+
+    // Shrink proportionally from widest columns until it fits
+    if current > target {
+        overflow := current - target
+        // Build list of indices sorted by width desc each iteration
+        for overflow > 0 {
+            // Find widest shrinkable column
+            widest := -1
+            idx := -1
+            for i := 0; i < n; i++ {
+                if widths[i] > min[i] && widths[i] > widest {
+                    widest = widths[i]
+                    idx = i
+                }
+            }
+            if idx == -1 {
+                break // cannot shrink further
+            }
+            widths[idx]--
+            overflow--
+        }
+    }
+    return widths
+}
+
 // FormatDailyUsageTableProper creates a proper table like ccusage
 func FormatDailyUsageTableProper(dailyUsage []types.DailyUsage) {
 	if len(dailyUsage) == 0 {
@@ -123,9 +207,8 @@ func FormatDailyUsageTableProper(dailyUsage []types.DailyUsage) {
 	fmt.Println(titleBorder.Render(title))
 	fmt.Println()
 	
-	// Define headers and calculate data
-	headers := []string{"Date", "Models", "Input", "Output", "Cache Create", "Cache Read", "Total Tokens", "Cost (USD)"}
-	widths := []int{12, 20, 10, 10, 12, 12, 12, 10}
+    // Define headers and build rows
+    headers := []string{"Date", "Models", "Input", "Output", "Cache Create", "Cache Read", "Total Tokens", "Cost (USD)"}
 	
 	var rows [][]string
 	var totalCost float64
@@ -180,9 +263,15 @@ func FormatDailyUsageTableProper(dailyUsage []types.DailyUsage) {
 	}
 	rows = append(rows, totalRow)
 	
-	// Render the table
-	table := CreateTable(headers, rows, widths)
-	fmt.Println(table)
+    // Autosize column widths based on content and terminal width
+    min := []int{10, 12, 6, 6, 6, 6, 10, 8}
+    if isCompact() {
+        min = []int{8, 10, 5, 5, 5, 5, 9, 8}
+    }
+    widths := computeAutoWidths(headers, rows, min)
+    // Render the table
+    table := CreateTable(headers, rows, widths)
+    fmt.Println(table)
 }
 
 // FormatMonthlyUsageTableProper creates a proper monthly table like ccusage
@@ -205,9 +294,8 @@ func FormatMonthlyUsageTableProper(monthlyUsage []types.MonthlyUsage) {
 	fmt.Println(titleBorder.Render(title))
 	fmt.Println()
 	
-	// Define headers
-	headers := []string{"Month", "Days Active", "Total Requests", "Input Tokens", "Output Tokens", "Total Tokens", "Total Cost (USD)"}
-	widths := []int{10, 12, 15, 14, 15, 14, 16}
+    // Define headers and build rows
+    headers := []string{"Month", "Days Active", "Total Requests", "Input Tokens", "Output Tokens", "Total Tokens", "Total Cost (USD)"}
 	
 	var rows [][]string
 	var totalCost float64
@@ -256,18 +344,42 @@ func FormatMonthlyUsageTableProper(monthlyUsage []types.MonthlyUsage) {
 	}
 	rows = append(rows, totalRow)
 	
-	// Render the table
-	table := CreateTable(headers, rows, widths)
-	fmt.Println(table)
+    // Autosize widths
+    min := []int{7, 6, 10, 10, 10, 10, 12}
+    if isCompact() {
+        min = []int{6, 5, 8, 8, 8, 8, 10}
+    }
+    widths := computeAutoWidths(headers, rows, min)
+    // Render the table
+    table := CreateTable(headers, rows, widths)
+    fmt.Println(table)
 }
 
 // padString pads a string to a specific width
 func padString(s string, width int) string {
-	if len(s) >= width {
-		if width > 3 {
-			return s[:width-3] + "..."
-		}
-		return s[:width]
-	}
-	return s + strings.Repeat(" ", width-len(s))
+    // Ensure we measure and trim by display width (handles wide runes)
+    w := runewidth.StringWidth(s)
+    if w > width {
+        // Trim to width-3 and add ellipsis if possible
+        target := width
+        suffix := ""
+        if width > 3 {
+            target = width - 3
+            suffix = "..."
+        }
+        // Accumulate runes until reaching target width
+        var b strings.Builder
+        cur := 0
+        for _, r := range s {
+            rw := runewidth.RuneWidth(r)
+            if cur+rw > target {
+                break
+            }
+            b.WriteRune(r)
+            cur += rw
+        }
+        return b.String() + suffix
+    }
+    // Pad with spaces based on visual width
+    return s + strings.Repeat(" ", width-w)
 }

@@ -9,19 +9,16 @@ VERSION=${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo "v
 BUILD_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-echo "Building cxusage ${VERSION}"
+echo "Building cx (formerly cxusage) ${VERSION}"
 echo "Build time: ${BUILD_TIME}"
 echo "Git commit: ${GIT_COMMIT}"
 
-# Build with version info
+# Build with version info (output single binary: cx)
 go build -ldflags "
     -X 'github.com/johanneserhardt/cxusage/internal/commands.Version=${VERSION}' 
     -X 'github.com/johanneserhardt/cxusage/internal/commands.BuildTime=${BUILD_TIME}' 
     -X 'github.com/johanneserhardt/cxusage/internal/commands.GitCommit=${GIT_COMMIT}'
-" -o cxusage ./cmd/cxusage
+" -o cx ./cmd/cxusage
 
 echo "Build completed successfully!"
-# Create shorter alias
-cp cxusage cx
-
-echo "Created binaries: cxusage, cx"
+echo "Created binary: cx"

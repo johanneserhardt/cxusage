@@ -1,13 +1,14 @@
 package commands
 
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/johanneserhardt/cxusage/internal/config"
-	"github.com/johanneserhardt/cxusage/internal/types"
+    "github.com/sirupsen/logrus"
+    "github.com/spf13/cobra"
+    "github.com/johanneserhardt/cxusage/internal/config"
+    "github.com/johanneserhardt/cxusage/internal/types"
+    "github.com/johanneserhardt/cxusage/internal/utils"
 )
 
 var (
@@ -53,6 +54,16 @@ real-time live monitoring, similar to ccusage for Claude Code.
 		}
 		logger.SetLevel(level)
 
+			// Set compact mode for tables
+			if val, err := cmd.Flags().GetBool("compact"); err == nil {
+				utils.SetCompactMode(val)
+			}
+
+			// Width override for autosized tables
+			if w, err := cmd.Flags().GetInt("width"); err == nil && w > 0 {
+				utils.SetWidthOverride(w)
+			}
+
 		return nil
 	},
 }
@@ -66,11 +77,13 @@ func Execute() {
 }
 
 func init() {
-	// Global flags
-	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
-	rootCmd.PersistentFlags().String("log-level", "info", "Log level (debug, info, warn, error)")
-	rootCmd.PersistentFlags().Bool("offline", false, "Use local logs only (no API calls)")
-	
-	// Bind flags to viper
-	// viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))
+    // Global flags
+    rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table, json)")
+    rootCmd.PersistentFlags().String("log-level", "info", "Log level (debug, info, warn, error)")
+    rootCmd.PersistentFlags().Bool("offline", false, "Use local logs only (no API calls)")
+    rootCmd.PersistentFlags().Bool("compact", false, "Force compact table layout")
+    rootCmd.PersistentFlags().Int("width", 0, "Override table width (useful for compact testing)")
+
+    // Bind flags to viper
+    // viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))
 }

@@ -30,9 +30,8 @@ func FormatBlocksTableProper(sessionBlocks []types.SessionBlock, tokenLimit *int
 	fmt.Println(titleBorder.Render(title))
 	fmt.Println()
 	
-	// Define headers and widths
-	headers := []string{"Block Start", "Status", "Duration", "Requests", "Input", "Output", "Total Tokens", "Cost (USD)", "Models"}
-	widths := []int{16, 10, 12, 10, 10, 10, 12, 10, 20}
+    // Define headers and build rows
+    headers := []string{"Block Start", "Status", "Duration", "Requests", "Input", "Output", "Total Tokens", "Cost (USD)", "Models"}
 	
 	var rows [][]string
 	var totalCost float64
@@ -98,9 +97,15 @@ func FormatBlocksTableProper(sessionBlocks []types.SessionBlock, tokenLimit *int
 	}
 	rows = append(rows, totalRow)
 	
-	// Render the table
-	table := CreateTable(headers, rows, widths)
-	fmt.Println(table)
+    // Autosize widths
+    min := []int{14, 8, 8, 7, 7, 7, 10, 10, 10}
+    if isCompact() {
+        min = []int{12, 6, 7, 6, 6, 6, 9, 9, 8}
+    }
+    widths := computeAutoWidths(headers, rows, min)
+    // Render the table
+    table := CreateTable(headers, rows, widths)
+    fmt.Println(table)
 	
 	// Show active block projection if found
 	if activeBlockFound {
