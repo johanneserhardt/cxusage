@@ -58,13 +58,14 @@ func FormatNumber(n int) string {
 
 // FormatCurrency formats a float64 as currency with $ sign
 func FormatCurrency(amount float64) string {
-	if amount == 0 {
-		return "$0.00"
-	}
-	if amount < 0.01 {
-		return fmt.Sprintf("$%.4f", amount)
-	}
-	return fmt.Sprintf("$%.2f", amount)
+    if amount == 0 {
+        return "$0.00"
+    }
+    // Show finer precision for small amounts
+    if amount < 0.10 {
+        return fmt.Sprintf("$%.4f", amount)
+    }
+    return fmt.Sprintf("$%.2f", amount)
 }
 
 // CreateCcusageStyleTable creates a table matching ccusage's style
