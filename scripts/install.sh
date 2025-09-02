@@ -23,12 +23,14 @@ else
     INSTALL_DIR="$HOME/.local/bin"
 fi
 
-# Copy binary
+# Copy binaries
 echo "Installing to $INSTALL_DIR..."
 cp cxusage "$INSTALL_DIR/"
+cp cx "$INSTALL_DIR/"
 
-# Make sure it's executable
+# Make sure they're executable
 chmod +x "$INSTALL_DIR/cxusage"
+chmod +x "$INSTALL_DIR/cx"
 
 # Check if directory is in PATH
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
@@ -40,13 +42,23 @@ if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
 fi
 
 # Test installation
-if command -v cxusage >/dev/null 2>&1; then
+if command -v cxusage >/dev/null 2>&1 && command -v cx >/dev/null 2>&1; then
     echo "✅ Installation successful!"
+    echo ""
+    echo "📦 Installed binaries:"
+    echo "  • cxusage (full name)"
+    echo "  • cx (short alias)"
     echo ""
     cxusage version
     echo ""
-    echo "Try: cxusage demo"
+    echo "Try:"
+    echo "  • cxusage demo  (or cx demo)"
+    echo "  • cx blocks --live"
 else
-    echo "⚠️  Installation completed but cxusage not found in PATH"
+    echo "⚠️  Installation completed but binaries not found in PATH"
     echo "You may need to restart your terminal or add $INSTALL_DIR to PATH"
+    echo ""
+    echo "Installed:"
+    echo "  • $INSTALL_DIR/cxusage"
+    echo "  • $INSTALL_DIR/cx"
 fi

@@ -1,14 +1,15 @@
 package live
 
 import (
-	"fmt"
-	"math"
-	"strings"
-	"time"
+    "fmt"
+    "math"
+    "strings"
+    "time"
 
-	"github.com/johanneserhardt/cxusage/internal/blocks"
-	"github.com/johanneserhardt/cxusage/internal/types"
-	"github.com/johanneserhardt/cxusage/internal/utils"
+    "github.com/charmbracelet/lipgloss"
+    "github.com/johanneserhardt/cxusage/internal/blocks"
+    "github.com/johanneserhardt/cxusage/internal/types"
+    "github.com/johanneserhardt/cxusage/internal/utils"
 )
 
 const (
@@ -62,16 +63,49 @@ func (d *DashboardRenderer) RenderFullDashboard(block *types.SessionBlock, now t
 	d.renderFooter()
 }
 
+// RenderWaitingState renders the waiting state dashboard
+func (d *DashboardRenderer) RenderWaitingState(now time.Time) {
+	// Clear screen and move to top
+	fmt.Print("\033[2J\033[H")
+	
+	d.renderHeader()
+	
+	// Waiting message
+    waitingTitle := "⏳ WAITING FOR CODEX CLI ACTIVITY..."
+    waitingStyled := utils.BoldYellow(waitingTitle)
+    waitingPadding := (d.width - lipgloss.Width(waitingStyled)) / 2
+	
+	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
+    fmt.Printf("│%s%s%s│\n", 
+        strings.Repeat(" ", waitingPadding),
+        waitingStyled,
+        strings.Repeat(" ", d.width-lipgloss.Width(waitingStyled)-waitingPadding))
+	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
+	
+    infoText := "No active 5-hour billing block found. Start using Codex CLI to see live usage tracking."
+    infoStyled := utils.Gray(infoText)
+    infoPadding := (d.width - lipgloss.Width(infoStyled)) / 2
+	
+    fmt.Printf("│%s%s%s│\n", 
+        strings.Repeat(" ", infoPadding),
+        infoStyled,
+        strings.Repeat(" ", d.width-lipgloss.Width(infoStyled)-infoPadding))
+	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
+	
+	d.renderFooter()
+}
+
 // renderHeader renders the dashboard header
 func (d *DashboardRenderer) renderHeader() {
-	title := "CODEX CLI - LIVE TOKEN USAGE MONITOR"
-	padding := (d.width - len(title)) / 2
+    title := "CODEX CLI - LIVE TOKEN USAGE MONITOR"
+    titleStyled := utils.BoldWhite(title)
+    padding := (d.width - lipgloss.Width(titleStyled)) / 2
 	
 	d.renderTopBorder()
-	fmt.Printf("│%s%s%s│\n", 
-		strings.Repeat(" ", padding),
-		utils.BoldWhite(title),
-		strings.Repeat(" ", d.width-len(title)-padding))
+    fmt.Printf("│%s%s%s│\n", 
+        strings.Repeat(" ", padding),
+        titleStyled,
+        strings.Repeat(" ", d.width-lipgloss.Width(titleStyled)-padding))
 	d.renderSectionBorder()
 }
 
@@ -79,33 +113,44 @@ func (d *DashboardRenderer) renderHeader() {
 func (d *DashboardRenderer) renderSessionSection(block *types.SessionBlock, now time.Time) {
 	elapsed := now.Sub(block.StartTime)
 	remaining := block.EndTime.Sub(now)
+	if remaining < 0 {
+		remaining = 0
+	}
 	totalDuration := block.EndTime.Sub(block.StartTime)
 	
 	elapsedHours := int(elapsed.Hours())
-	remainingHours := int(remaining.Hours())
+	elapsedMins := int(elapsed.Minutes()) % 60
+	remainingHours := int(remaining.Hours()) 
+	remainingMins := int(remaining.Minutes()) % 60
 	
 	// Calculate percentage
 	progress := elapsed.Seconds() / totalDuration.Seconds()
+	if progress > 1.0 {
+		progress = 1.0
+	}
 	percentage := progress * 100
 	
 	// Session header
 	sessionTitle := fmt.Sprintf("%s SESSION", SessionEmoji)
 	progressText := fmt.Sprintf("%.1f%%", percentage)
 	
-	headerPadding := d.width - len(sessionTitle) - len(progressText) - 2
+    headerPadding := d.width - lipgloss.Width(utils.BoldWhite(sessionTitle)) - lipgloss.Width(utils.BoldWhite(progressText)) - 2
 	fmt.Printf("│ %s%s%s │\n", 
 		utils.BoldWhite(sessionTitle),
 		strings.Repeat(" ", headerPadding),
 		utils.BoldWhite(progressText))
 	
-	// Time details
-	timeInfo := fmt.Sprintf("Started: %s  Elapsed: %dh  Remaining: %dh (%s)",
-		utils.Cyan(block.StartTime.Format("15:04:05 AM")),
-		elapsedHours,
-		remainingHours,
-		utils.Gray(block.EndTime.Format("15:04:05 AM")))
-	
-	timePadding := d.width - len(stripColors(timeInfo)) - 2
+	// Time details with proper timezone formatting
+    timeInfo := fmt.Sprintf("Started: %s  Elapsed: %dh %dm  Remaining: %dh %dm (%s)",
+        utils.Cyan(block.StartTime.Local().Format("03:04:05 PM")),
+        elapsedHours, elapsedMins,
+        remainingHours, remainingMins,
+        utils.Gray(block.EndTime.Local().Format("03:04:05 PM")))
+
+    timePadding := d.width - lipgloss.Width(timeInfo) - 2
+    if timePadding < 0 {
+        timePadding = 0
+    }
 	fmt.Printf("│ %s%s │\n", timeInfo, strings.Repeat(" ", timePadding))
 	
 	// Progress bar
@@ -128,7 +173,7 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 		usagePercent = float64(block.TotalTokens) / float64(d.tokenLimit) * 100
 		if usagePercent > 100 {
 			usageColorName = "red"
-			status = "EXCEEDED"
+			status = "HIGH"
 		} else if usagePercent > 80 {
 			usageColorName = "red"
 			status = "HIGH"
@@ -140,7 +185,7 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 			status = "NORMAL"
 		}
 	} else {
-		usagePercent = math.Min(float64(block.TotalTokens) / 50000 * 100, 100) // Assume 50k as reference
+		usagePercent = math.Min(float64(block.TotalTokens) / 50000 * 100, 100)
 		usageColorName = "green"
 		status = "TRACKING"
 	}
@@ -156,7 +201,10 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 		usagePercentText = fmt.Sprintf("%s tokens", utils.FormatNumber(block.TotalTokens))
 	}
 	
-	headerPadding := d.width - len(stripColors(usageTitle)) - len(stripColors(usagePercentText)) - 2
+    headerPadding := d.width - lipgloss.Width(utils.BoldWhite(usageTitle)) - lipgloss.Width(utils.BoldWhite(usagePercentText)) - 2
+	if headerPadding < 0 {
+		headerPadding = 0
+	}
 	fmt.Printf("│ %s%s%s │\n", 
 		utils.BoldWhite(usageTitle),
 		strings.Repeat(" ", headerPadding),
@@ -190,7 +238,10 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 			d.formatCost(block.TotalCost))
 	}
 	
-	detailsPadding := d.width - len(stripColors(usageDetails)) - 2
+    detailsPadding := d.width - lipgloss.Width(usageDetails) - 2
+    if detailsPadding < 0 {
+        detailsPadding = 0
+    }
 	fmt.Printf("│ %s%s │\n", usageDetails, strings.Repeat(" ", detailsPadding))
 	
 	// Usage progress bar
@@ -243,7 +294,10 @@ func (d *DashboardRenderer) renderProjectionSection(block *types.SessionBlock) {
 		projectionPercentText = fmt.Sprintf("%s tokens", utils.FormatNumber(projection.ProjectedTokens))
 	}
 	
-	headerPadding := d.width - len(stripColors(projectionTitle)) - len(stripColors(projectionPercentText)) - 2
+    headerPadding := d.width - lipgloss.Width(utils.BoldWhite(projectionTitle)) - lipgloss.Width(utils.BoldWhite(projectionPercentText)) - 2
+    if headerPadding < 0 {
+        headerPadding = 0
+    }
 	fmt.Printf("│ %s%s%s │\n", 
 		utils.BoldWhite(projectionTitle),
 		strings.Repeat(" ", headerPadding),
@@ -267,7 +321,10 @@ func (d *DashboardRenderer) renderProjectionSection(block *types.SessionBlock) {
 		utils.FormatNumber(projection.ProjectedTokens),
 		d.formatCost(projection.ProjectedCost))
 	
-	detailsPadding := d.width - len(stripColors(projectionDetails)) - 2
+    detailsPadding := d.width - lipgloss.Width(projectionDetails) - 2
+    if detailsPadding < 0 {
+        detailsPadding = 0
+    }
 	fmt.Printf("│ %s%s │\n", projectionDetails, strings.Repeat(" ", detailsPadding))
 	
 	// Projection progress bar
@@ -283,24 +340,31 @@ func (d *DashboardRenderer) renderModelsSection(block *types.SessionBlock) {
 	}
 	
 	// Models header
-	modelsTitle := fmt.Sprintf("%s Models: %s", ModelsEmoji, strings.Join(block.Models, ", "))
-	modelsPadding := d.width - len(stripColors(modelsTitle)) - 2
-	fmt.Printf("│ %s%s │\n", 
-		utils.BoldWhite(modelsTitle),
-		strings.Repeat(" ", modelsPadding))
+    modelsTitle := fmt.Sprintf("%s Models: %s", ModelsEmoji, strings.Join(block.Models, ", "))
+    modelsPadding := d.width - lipgloss.Width(utils.BoldWhite(modelsTitle)) - 2
+    if modelsPadding < 0 {
+        modelsPadding = 0
+    }
+    fmt.Printf("│ %s%s │\n", 
+        utils.BoldWhite(modelsTitle),
+        strings.Repeat(" ", modelsPadding))
 	
 	d.renderSectionBorder()
 }
 
 // renderFooter renders the dashboard footer
 func (d *DashboardRenderer) renderFooter() {
-	footerText := fmt.Sprintf("%s Refreshing every 1s  •  Press Ctrl+C to stop", RefreshEmoji)
-	footerPadding := (d.width - len(stripColors(footerText))) / 2
-	
-	fmt.Printf("│%s%s%s│\n", 
-		strings.Repeat(" ", footerPadding),
-		utils.Gray(footerText),
-		strings.Repeat(" ", d.width-len(stripColors(footerText))-footerPadding))
+    footerText := fmt.Sprintf("%s Refreshing every 1s  •  Press Ctrl+C to stop", RefreshEmoji)
+    footerStyled := utils.Gray(footerText)
+    footerPadding := (d.width - lipgloss.Width(footerStyled)) / 2
+    if footerPadding < 0 {
+        footerPadding = 0
+    }
+
+    fmt.Printf("│%s%s%s│\n", 
+        strings.Repeat(" ", footerPadding),
+        footerStyled,
+        strings.Repeat(" ", d.width-lipgloss.Width(footerStyled)-footerPadding))
 	
 	d.renderBottomBorder()
 }
@@ -338,6 +402,9 @@ func (d *DashboardRenderer) renderProgressBar(progress float64, colorName string
 	
 	// Center the progress bar
 	padding := (d.width - ProgressBarWidth - 4) / 2 // -4 for brackets and spaces
+	if padding < 0 {
+		padding = 0
+	}
 	fmt.Printf("│%s %s %s│\n", 
 		strings.Repeat(" ", padding),
 		coloredBar,
@@ -370,48 +437,9 @@ func (d *DashboardRenderer) formatCost(cost float64) string {
 	return utils.Green(costStr)
 }
 
-// RenderWaitingState renders the waiting state dashboard
-func (d *DashboardRenderer) RenderWaitingState(now time.Time) {
-	// Render header
-	d.renderHeader()
-	
-	// Waiting message
-	waitingTitle := "⏳ WAITING FOR CODEX CLI ACTIVITY..."
-	waitingPadding := (d.width - len(waitingTitle)) / 2
-	
-	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
-	fmt.Printf("│%s%s%s│\n", 
-		strings.Repeat(" ", waitingPadding),
-		utils.BoldYellow(waitingTitle),
-		strings.Repeat(" ", d.width-len(waitingTitle)-waitingPadding))
-	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
-	
-	infoText := "No active 5-hour billing block found. Start using Codex CLI to see live usage tracking."
-	infoPadding := (d.width - len(infoText)) / 2
-	
-	fmt.Printf("│%s%s%s│\n", 
-		strings.Repeat(" ", infoPadding),
-		utils.Gray(infoText),
-		strings.Repeat(" ", d.width-len(infoText)-infoPadding))
-	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
-	
-	// Updated time
-	timeText := fmt.Sprintf("Updated: %s", now.Format("2006-01-02 15:04:05"))
-	timePadding := (d.width - len(timeText)) / 2
-	
-	fmt.Printf("│%s%s%s│\n", 
-		strings.Repeat(" ", timePadding),
-		utils.Gray(timeText),
-		strings.Repeat(" ", d.width-len(timeText)-timePadding))
-	fmt.Printf("│%s│\n", strings.Repeat(" ", d.width))
-	
-	// Render footer
-	d.renderFooter()
-}
-
-// stripColors removes color codes for length calculation
+// stripColors removes color codes for length calculation (simplified)
 func stripColors(s string) string {
-	// This is a simplified version - in production you'd want a more robust implementation
-	// For now, we'll just estimate
+	// This is a simplified approach - removes common ANSI codes
+	// For production, you'd want a more robust implementation
 	return s
 }

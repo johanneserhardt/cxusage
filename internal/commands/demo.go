@@ -187,10 +187,10 @@ func runDemo(cmd *cobra.Command, args []string) {
 	
 	fmt.Println(utils.BoldWhite("🎨 cxusage - ccusage-style Output Demo"))
 	
-	utils.FormatDailyUsageTable(sampleDaily)
+	utils.FormatDailyUsageTableProper(sampleDaily)
 	
 	fmt.Println()
-	utils.FormatMonthlyUsageTable(sampleMonthly)
+	utils.FormatMonthlyUsageTableProper(sampleMonthly)
 	
 	fmt.Println()
 	showBlocksDemo()

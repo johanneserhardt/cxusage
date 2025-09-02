@@ -77,7 +77,7 @@ func outputMonthlyJSON(monthlyUsage []types.MonthlyUsage) error {
 }
 
 func outputMonthlyTable(monthlyUsage []types.MonthlyUsage) error {
-	utils.FormatMonthlyUsageTable(monthlyUsage)
+	utils.FormatMonthlyUsageTableProper(monthlyUsage)
 	return nil
 }
 

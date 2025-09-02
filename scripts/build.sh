@@ -21,3 +21,7 @@ go build -ldflags "
 " -o cxusage ./cmd/cxusage
 
 echo "Build completed successfully!"
+# Create shorter alias
+cp cxusage cx
+
+echo "Created binaries: cxusage, cx"

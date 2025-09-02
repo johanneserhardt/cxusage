@@ -50,3 +50,6 @@ config.yml
 # Temporary files
 *.tmp
 *.temp
+
+# Local build binaries
+/cx

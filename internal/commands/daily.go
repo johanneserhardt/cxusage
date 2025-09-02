@@ -92,7 +92,7 @@ func outputDailyJSON(dailyUsage []types.DailyUsage) error {
 }
 
 func outputDailyTable(dailyUsage []types.DailyUsage) error {
-	utils.FormatDailyUsageTable(dailyUsage)
+	utils.FormatDailyUsageTableProper(dailyUsage)
 	return nil
 }
 

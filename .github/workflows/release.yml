@@ -6,7 +6,7 @@ on:
       - "v*.*.*" # Only trigger on semantic version tags
 
 jobs:
-  auto_release:
+  build_and_release:
     runs-on: ubuntu-latest
     permissions:
       contents: write

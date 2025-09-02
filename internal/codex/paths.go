@@ -1,10 +1,11 @@
 package codex
 
 import (
-	"os"
-	"path/filepath"
+    "os"
+    "path/filepath"
+    "strings"
 
-	"github.com/johanneserhardt/cxusage/internal/types"
+    "github.com/johanneserhardt/cxusage/internal/types"
 )
 
 const (
@@ -59,30 +60,38 @@ func CodexDirExists(cfg *types.Config) (bool, error) {
 
 // GetUsageLogFiles returns all usage log files from Codex CLI
 func GetUsageLogFiles(cfg *types.Config) ([]string, error) {
-	paths, err := GetCodexPaths(cfg)
-	if err != nil {
-		return nil, err
-	}
+    paths, err := GetCodexPaths(cfg)
+    if err != nil {
+        return nil, err
+    }
 
-	var files []string
+    var files []string
 
-	// Check logs directory
-	if stat, err := os.Stat(paths.LogsDir); err == nil && stat.IsDir() {
-		logFiles, err := filepath.Glob(filepath.Join(paths.LogsDir, "*.jsonl"))
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, logFiles...)
-	}
+    // Helper: recursively collect .jsonl files under a root directory
+    collectJSONL := func(root string) {
+        _ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+            if err != nil {
+                return nil // skip unreadable entries
+            }
+            if d.IsDir() {
+                return nil
+            }
+            if strings.HasSuffix(d.Name(), ".jsonl") {
+                files = append(files, path)
+            }
+            return nil
+        })
+    }
 
-	// Check projects directory (similar to Claude Code structure)
-	if stat, err := os.Stat(paths.ProjectsDir); err == nil && stat.IsDir() {
-		projectFiles, err := filepath.Glob(filepath.Join(paths.ProjectsDir, "*", "*.jsonl"))
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, projectFiles...)
-	}
+    // Check logs directory (recursively)
+    if stat, err := os.Stat(paths.LogsDir); err == nil && stat.IsDir() {
+        collectJSONL(paths.LogsDir)
+    }
 
-	return files, nil
+    // Check projects directory (recursively, supports session subfolders)
+    if stat, err := os.Stat(paths.ProjectsDir); err == nil && stat.IsDir() {
+        collectJSONL(paths.ProjectsDir)
+    }
+
+    return files, nil
 }

@@ -77,12 +77,56 @@ func AggregateIntoBlocks(entries []types.CodexUsageEntry, sessionDurationHours i
 	// Convert map to sorted slice and determine active blocks
 	now := time.Now()
 	for _, block := range blockMap {
-		// Check if block is currently active (within 5-hour window and has recent activity)
+		// Check if block is currently active (within 5-hour window)
 		if now.After(block.StartTime) && now.Before(block.EndTime) {
 			block.IsActive = true
 		}
 
 		blocks = append(blocks, *block)
+	}
+	
+	// If no block is currently active but we have recent data, create/mark current block as active
+	hasActiveBlock := false
+	for _, block := range blocks {
+		if block.IsActive {
+			hasActiveBlock = true
+			break
+		}
+	}
+	
+	// If no active block but we have recent usage, check if we should create a current active block
+	if !hasActiveBlock && len(blocks) > 0 {
+		latestBlock := blocks[len(blocks)-1]
+		// If the latest activity was less than 1 hour ago, consider creating a new active block
+		if latestBlock.ActualEndTime != nil && now.Sub(*latestBlock.ActualEndTime) < time.Hour {
+			// Create a new active block for the current time
+			currentBlockStart := floorToBlockStart(now, sessionDurationHours)
+			currentBlockEnd := currentBlockStart.Add(time.Duration(sessionDurationHours) * time.Hour)
+			
+			// Check if this would be a new block
+			newBlock := true
+			for i, existing := range blocks {
+				if existing.StartTime.Equal(currentBlockStart) {
+					// Update existing block to be active
+					blocks[i].IsActive = true
+					blocks[i].EndTime = currentBlockEnd
+					newBlock = false
+					break
+				}
+			}
+			
+			if newBlock {
+				activeBlock := types.SessionBlock{
+					StartTime:     currentBlockStart,
+					EndTime:       currentBlockEnd,
+					IsActive:      true,
+					ModelUsage:    make(map[string]types.Usage),
+					ModelCosts:    make(map[string]float64),
+					Models:        []string{},
+				}
+				blocks = append(blocks, activeBlock)
+			}
+		}
 	}
 
 	// Sort blocks by start time
@@ -199,7 +243,7 @@ func FilterRecentBlocks(blocks []types.SessionBlock, days int) []types.SessionBl
 
 // CalculateProjections calculates projections for an active block
 func CalculateProjections(block *types.SessionBlock) *types.BlockProjection {
-	if !block.IsActive || block.ActualEndTime == nil {
+	if !block.IsActive {
 		return nil
 	}
 
@@ -207,10 +251,10 @@ func CalculateProjections(block *types.SessionBlock) *types.BlockProjection {
 	timeElapsed := now.Sub(block.StartTime).Minutes()
 	timeRemaining := block.EndTime.Sub(now)
 	
-	if timeElapsed <= 0 {
+	if timeElapsed <= 0 || block.TotalTokens == 0 {
 		return &types.BlockProjection{
-			ProjectedTokens: 0,
-			ProjectedCost:   0,
+			ProjectedTokens: block.TotalTokens,
+			ProjectedCost:   block.TotalCost,
 			BurnRate:        0,
 			TimeRemaining:   timeRemaining,
 		}

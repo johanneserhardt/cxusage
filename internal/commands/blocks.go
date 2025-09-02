@@ -145,7 +145,8 @@ func runBlocks(cmd *cobra.Command, args []string) error {
 	case types.OutputFormatJSON:
 		return outputBlocksJSON(sessionBlocks)
 	case types.OutputFormatTable:
-		return outputBlocksTable(sessionBlocks, tokenLimit)
+		utils.FormatBlocksTableProper(sessionBlocks, tokenLimit)
+		return nil
 	default:
 		return fmt.Errorf("unsupported output format: %s", outputFormat)
 	}
@@ -157,7 +158,7 @@ func outputBlocksJSON(sessionBlocks []types.SessionBlock) error {
 	return encoder.Encode(sessionBlocks)
 }
 
-func outputBlocksTable(sessionBlocks []types.SessionBlock, tokenLimit *int) error {
+func outputBlocksTableLipgloss(sessionBlocks []types.SessionBlock, tokenLimit *int) error {
 	if len(sessionBlocks) == 0 {
 		fmt.Println(utils.Yellow("No blocks found"))
 		return nil
