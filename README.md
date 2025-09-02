@@ -25,7 +25,7 @@ A gorgeous CLI tool for analyzing OpenAI Codex CLI usage data from local files, 
 
 - 📊 **Responsive Tables** - Beautiful adaptive layouts that fit any terminal size
 - 🔄 **Live Monitoring** - Real-time 5-hour billing block tracking with stunning dashboard
-- 🎨 **Theme-Adaptive** - Gorgeous output that works on any terminal theme  
+- 🎨 **Theme-Adaptive** - Gorgeous output that works on any terminal theme
 - 💰 **Precise Cost Tracking** - Accurate calculation with 4-decimal precision for small amounts
 - 🎯 **5-Hour Blocks** - Track usage in Claude-style billing periods with live projections
 - 📤 **Multiple Output Formats** - Beautiful tables or JSON output
@@ -59,8 +59,9 @@ cx blocks --live
 The easiest way to install cx on macOS or Linux:
 
 ```bash
-# Install via Homebrew formula  
-brew install https://github.com/johanneserhardt/cxusage/releases/latest/download/cxusage.rb
+# Add tap and install
+brew tap johanneserhardt/tap
+brew install cxusage
 
 # Then use immediately:
 cx demo
@@ -71,7 +72,8 @@ cx blocks --live
 - ✅ **Automatic platform detection** (Intel/ARM, macOS/Linux)
 - ✅ **Secure installation** with SHA256 verification
 - ✅ **Both commands available**: `cx` (short) and `cxusage` (full)
-- ✅ **Easy updates** with future releases
+- ✅ **Professional tap integration** with discoverable formulas
+- ✅ **Automatic updates** when new releases are published
 
 ### 🚀 Download Binary (Windows/Manual Install)
 For Windows users or manual installation:
@@ -79,7 +81,7 @@ For Windows users or manual installation:
 **[📥 Download from GitHub Releases](https://github.com/johanneserhardt/cxusage/releases/latest)**
 
 Available for:
-- **Linux** (AMD64, ARM64)  
+- **Linux** (AMD64, ARM64)
 - **macOS** (Intel, Apple Silicon)
 - **Windows** (AMD64)
 
@@ -130,7 +132,7 @@ codex_path: "/custom/path/to/codex"  # Optional custom Codex directory
 # Last 7 days (default)
 cx daily
 
-# Last 30 days  
+# Last 30 days
 cx daily 30
 
 # Specific date range
@@ -226,47 +228,6 @@ The `cx blocks --live` command provides a stunning real-time dashboard featuring
 
 - `--output, -o` - Output format: table (default) or json
 - `--log-level` - Log level: debug, info, warn, error
-- `--offline` - Legacy flag (always local now)
-
-## 💡 Examples
-
-```bash
-# Beautiful daily report with responsive tables
-cx daily
-
-# Live monitoring with gorgeous full-screen dashboard  
-cx blocks --live
-
-# Monthly analysis with professional formatting
-cx monthly
-
-# Check your setup and validate Codex CLI
-cx validate
-
-# See all the beautiful output capabilities
-cx demo
-```
-
-## 🔮 How It Works
-
-1. **Codex CLI** stores usage data locally in `~/.codex/`
-2. **cx** reads these local files (no API key needed!)
-3. Aggregates data into reports and 5-hour billing blocks
-4. Displays with gorgeous responsive formatting and colors
-5. Live mode monitors files for real-time updates with stunning visuals
-
-## 🆚 vs ccusage
-
-| Feature | ccusage (Claude) | cx (Codex) |
-|---------|------------------|------------|
-| Data Source | `~/.config/claude/` | `~/.codex/` |
-| API Key | Not needed | Not needed |
-| Live Monitor | ✅ | ✅ |
-| 5-Hour Blocks | ✅ | ✅ |
-| Beautiful Output | ✅ | ✅ |
-| Responsive Design | ✅ | ✅ |
-| Theme-Adaptive | ✅ | ✅ |
-| Homebrew Install | ❌ | ✅ |
 
 ## 🤝 Contributing
 
@@ -284,11 +245,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Inspired by [ccusage](https://github.com/ryoppippi/ccusage) for Claude Code by @ryoppippi
-- Built with [Cobra](https://github.com/spf13/cobra) CLI framework
-- Beautiful output powered by [Lipgloss](https://github.com/charmbracelet/lipgloss)
-- Professional table rendering with responsive design
-
+- Inspired by [ccusage](https://github.com/ryoppippi/ccusage)
 ---
 
 **Made with ❤️ for the OpenAI community**
