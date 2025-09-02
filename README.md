@@ -2,7 +2,9 @@
 
 A gorgeous CLI tool for analyzing OpenAI Codex CLI usage data from local files, inspired by ccusage for Claude Code. Track your token usage, costs, and usage patterns with stunning responsive terminal output and real-time live monitoring.
 
-> **Note:** The main command is now `cx` (short and memorable!) for the best user experience.
+## 📋 Releases
+
+👉 Check releases page 📖 **[Releases](releases/README.md)**
 
 ## 🎨 Beautiful Output
 
@@ -52,6 +54,14 @@ cx daily
 # 🔥 AMAZING: Live monitoring dashboard!
 cx blocks --live
 ```
+
+## 📋 Latest Release
+
+**Current Version:** [v0.1.0 (Upcoming)](releases/v0.1.0.md) - Initial release with gorgeous Lipgloss formatting and live monitoring
+
+📖 **[View All Releases](releases/README.md)** - Complete release history and notes
+
+🚀 **[Download Latest](https://github.com/johanneserhardt/cxusage/releases/latest)** - Get the newest version
 
 ## 📦 Installation
 
