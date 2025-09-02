@@ -169,7 +169,7 @@ jobs:
               system "#{bin}/cxusage", "version"
             end
           end
-RUBY
+          EOF
 
           VERSION_STR=${TAG_NAME#v}
           env \
@@ -241,7 +241,7 @@ RUBY
             system "#{bin}/${FORMULA_NAME}", "version"
             end
           end
-RUBY
+          EOF
 
           REPO="${{ github.repository }}"
           env REPO="$REPO" TAG_NAME="$TAG_NAME" VERSION_STR="$VERSION_STR" \
