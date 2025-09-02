@@ -118,6 +118,7 @@ jobs:
           set -euo pipefail
 
           TAG_NAME=${GITHUB_REF#refs/tags/}
+          REPO="$GITHUB_REPOSITORY"
 
           # Download built assets to compute SHA256 sums for Homebrew
           gh release download "$TAG_NAME" -p "cxusage-darwin-amd64" -O cxusage-darwin-amd64
@@ -130,32 +131,32 @@ jobs:
           SHA_LINUX_AMD64=$(shasum -a 256 cxusage-linux-amd64  | awk '{print $1}')
           SHA_LINUX_ARM64=$(shasum -a 256 cxusage-linux-arm64  | awk '{print $1}')
 
-          cat > cxusage.rb <<'RUBY'
+          cat > cxusage.rb <<RUBY
           class Cxusage < Formula
             desc "Codex CLI usage tracker with live dashboard"
-            homepage "https://github.com/#{ENV['GITHUB_REPOSITORY']}"
-            version "#{ENV['TAG_NAME']&.sub(/^v/, '') || '0.0.0'}"
+            homepage "https://github.com/${REPO}"
+            version "${TAG_NAME#v}"
             license "MIT"
 
             on_macos do
               on_intel do
-                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-darwin-amd64", :using => :nounzip
-                sha256 "#{ENV['SHA_DARWIN_AMD64']}"
+                url "https://github.com/${REPO}/releases/download/${TAG_NAME}/cxusage-darwin-amd64", :using => :nounzip
+                sha256 "${SHA_DARWIN_AMD64}"
               end
               on_arm do
-                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-darwin-arm64", :using => :nounzip
-                sha256 "#{ENV['SHA_DARWIN_ARM64']}"
+                url "https://github.com/${REPO}/releases/download/${TAG_NAME}/cxusage-darwin-arm64", :using => :nounzip
+                sha256 "${SHA_DARWIN_ARM64}"
               end
             end
 
             on_linux do
               on_intel do
-                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-linux-amd64", :using => :nounzip
-                sha256 "#{ENV['SHA_LINUX_AMD64']}"
+                url "https://github.com/${REPO}/releases/download/${TAG_NAME}/cxusage-linux-amd64", :using => :nounzip
+                sha256 "${SHA_LINUX_AMD64}"
               end
               on_arm do
-                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-linux-arm64", :using => :nounzip
-                sha256 "#{ENV['SHA_LINUX_ARM64']}"
+                url "https://github.com/${REPO}/releases/download/${TAG_NAME}/cxusage-linux-arm64", :using => :nounzip
+                sha256 "${SHA_LINUX_ARM64}"
               end
             end
 
@@ -166,7 +167,9 @@ jobs:
             end
 
             test do
-              system "#{bin}/cxusage", "version"
+              system "
+                \\#{bin}/cxusage
+              ", "version"
             end
           end
 RUBY

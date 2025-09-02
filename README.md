@@ -1,46 +1,80 @@
-# cxusage - Codex Usage Tracker
+# cx - Codex Usage Tracker
 
-A beautiful CLI tool for analyzing OpenAI Codex CLI usage data from local files, inspired by ccusage for Claude Code. Track your token usage, costs, and usage patterns with gorgeous terminal output and real-time monitoring.
+A gorgeous CLI tool for analyzing OpenAI Codex CLI usage data from local files, inspired by ccusage for Claude Code. Track your token usage, costs, and usage patterns with stunning responsive terminal output and real-time live monitoring.
+
+> **Note:** The main command is now `cx` (short and memorable!) for the best user experience.
+
+## 🎨 Beautiful Output
+
+```
+┌──────────────────────────────────────┐
+│ Codex CLI Token Usage Report - Daily │
+└──────────────────────────────────────┘
+
+┌──────────────┬──────────────────────┬────────────┬────────────┬──────────────┬──────────────┬──────────────┬────────────┐
+│ Date         │ Models               │ Input      │ Output     │ Cache Create │ Cache Read   │ Total Tokens │ Cost (USD) │
+├──────────────┼──────────────────────┼────────────┼────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+│ 2025-09-02   │ - gpt-4o, gpt-3.5... │ 2,000      │ 500        │ 0            │ 0            │ 2,500        │ $0.0003    │
+│ TOTAL        │                      │ 2,000      │ 500        │ 0            │ 0            │ 2,500        │ $0.0003    │
+└──────────────┴──────────────────────┴────────────┴────────────┴──────────────┴──────────────┴──────────────┴────────────┘
+```
+
+*Responsive tables with beautiful Unicode borders and theme-adaptive colors*
 
 ## ✨ Features
 
-- 📊 **Daily Reports** - Beautiful daily usage tables with colors and formatting
-- 📅 **Monthly Analysis** - Comprehensive monthly breakdowns with summaries
-- 🔄 **Live Monitoring** - Real-time 5-hour billing block tracking with gorgeous dashboard
-- 💰 **Cost Calculation** - Accurate cost calculation using current OpenAI pricing
-- 🎯 **5-Hour Blocks** - Track usage in Claude-style 5-hour billing periods
+- 📊 **Responsive Tables** - Beautiful adaptive layouts that fit any terminal size
+- 🔄 **Live Monitoring** - Real-time 5-hour billing block tracking with stunning dashboard
+- 🎨 **Theme-Adaptive** - Gorgeous output that works on any terminal theme  
+- 💰 **Precise Cost Tracking** - Accurate calculation with 4-decimal precision for small amounts
+- 🎯 **5-Hour Blocks** - Track usage in Claude-style billing periods with live projections
 - 📤 **Multiple Output Formats** - Beautiful tables or JSON output
-- 🎨 **Beautiful Output** - Professional formatting matching ccusage's visual style
 - 💾 **Local File Reading** - No API key needed - reads directly from ~/.codex/
 
 ## 🚀 Quick Start
 
-**cxusage** reads usage data directly from your local Codex CLI installation.
-
 ### Prerequisites
 1. **OpenAI Codex CLI** installed and configured
 2. Used Codex CLI at least once (to generate usage data)
-3. cxusage will automatically find and read from `~/.codex/` directory
+3. cx will automatically find and read from `~/.codex/` directory
 
 ### Basic Usage
 ```bash
 # Validate your setup
-cxusage validate
+cx validate
 
 # See beautiful demo output
-cxusage demo
+cx demo
 
 # Daily usage report
-cxusage daily
+cx daily
 
 # 🔥 AMAZING: Live monitoring dashboard!
-cxusage blocks --live
+cx blocks --live
 ```
 
 ## 📦 Installation
 
-### 🚀 Download Binary (Recommended)
-Download the latest pre-built binary for your platform:
+### 🍺 Homebrew (macOS/Linux) - Recommended
+The easiest way to install cx on macOS or Linux:
+
+```bash
+# Install via Homebrew formula  
+brew install https://github.com/johanneserhardt/cxusage/releases/latest/download/cxusage.rb
+
+# Then use immediately:
+cx demo
+cx blocks --live
+```
+
+**Benefits:**
+- ✅ **Automatic platform detection** (Intel/ARM, macOS/Linux)
+- ✅ **Secure installation** with SHA256 verification
+- ✅ **Both commands available**: `cx` (short) and `cxusage` (full)
+- ✅ **Easy updates** with future releases
+
+### 🚀 Download Binary (Windows/Manual Install)
+For Windows users or manual installation:
 
 **[📥 Download from GitHub Releases](https://github.com/johanneserhardt/cxusage/releases/latest)**
 
@@ -52,16 +86,16 @@ Available for:
 After download:
 ```bash
 # Make executable (Linux/macOS)
-chmod +x cxusage-*
-sudo mv cxusage-* /usr/local/bin/cxusage
+chmod +x cx-*
+sudo mv cx-* /usr/local/bin/cx
 
-# Or add to your PATH
-mv cxusage-* ~/bin/cxusage  # if ~/bin is in PATH
+# Windows: Add to PATH or use directly
 ```
 
-### 🛠️ Alternative: Go Install
+### 🛠️ Go Install
 ```bash
 go install github.com/johanneserhardt/cxusage/cmd/cxusage@latest
+# Then use as: cx [command]
 ```
 
 ### 🔨 Build from Source
@@ -83,7 +117,7 @@ cd cxusage
 Create a config file at `~/.config/cxusage.yaml`:
 
 ```yaml
-log_level: "info"
+log_level: "warn"
 local_logging: true
 logs_dir: "logs"
 codex_path: "/custom/path/to/codex"  # Optional custom Codex directory
@@ -94,76 +128,77 @@ codex_path: "/custom/path/to/codex"  # Optional custom Codex directory
 ### Daily Reports
 ```bash
 # Last 7 days (default)
-cxusage daily
+cx daily
 
-# Last 30 days
-cxusage daily 30
+# Last 30 days  
+cx daily 30
 
 # Specific date range
-cxusage daily --start-date 2024-01-01 --end-date 2024-01-31
+cx daily --start-date 2024-01-01 --end-date 2024-01-31
 
 # JSON output
-cxusage daily --output json
+cx daily --output json
 ```
 
 ### Monthly Reports
 ```bash
 # Last 3 months (default)
-cxusage monthly
+cx monthly
 
 # Last 6 months
-cxusage monthly 6
+cx monthly 6
 
 # JSON output
-cxusage monthly --output json
+cx monthly --output json
 ```
 
 ### 🔥 Live Monitoring (Best Feature!)
 ```bash
 # Live dashboard with real-time updates
-cxusage blocks --live
+cx blocks --live
 
 # Live monitoring with token limit warnings
-cxusage blocks --live --token-limit 50000
+cx blocks --live --token-limit 50000
 
 # Custom refresh rate (2 seconds)
-cxusage blocks --live --refresh-interval 2
+cx blocks --live --refresh-interval 2
 ```
 
 ### 5-Hour Blocks
 ```bash
 # Show recent billing blocks
-cxusage blocks
+cx blocks
 
 # Show only active block
-cxusage blocks --active
+cx blocks --active
 
 # Show blocks from last 7 days
-cxusage blocks --recent --recent-days 7
+cx blocks --recent --recent-days 7
 ```
 
 ### Utility Commands
 ```bash
 # Validate Codex CLI setup
-cxusage validate
+cx validate
 
 # Show version info
-cxusage version
+cx version
 
 # See demo of beautiful output
-cxusage demo
+cx demo
 ```
 
-## 🎨 Beautiful Output
+## 🎨 Visual Features
 
-cxusage provides gorgeous terminal output with:
+cx provides absolutely stunning terminal output with:
 
-- **Color-coded tables** with professional formatting
-- **Progress bars** with visual indicators
-- **Real-time dashboard** with live updates
+- **Responsive Unicode tables** that adapt to any screen size
+- **Theme-adaptive colors** that work perfectly on dark/light terminals
+- **Real-time live dashboard** with gorgeous progress bars
+- **Professional typography** with proper spacing and alignment
 - **Smart number formatting** with thousand separators
-- **Status indicators** and warnings
-- **Professional borders** and spacing
+- **Precise cost tracking** with 4-decimal precision for small amounts
+- **Status indicators** and visual warnings
 
 ## 🤖 Supported Models
 
@@ -177,48 +212,61 @@ Cost calculation support for all OpenAI models:
 
 ## 📊 Live Monitoring Dashboard
 
-The `cxusage blocks --live` command provides a stunning real-time dashboard featuring:
+The `cx blocks --live` command provides a stunning real-time dashboard featuring:
 
-- **🟢 SESSION** - Progress through current 5-hour block
-- **🔥 USAGE** - Current token usage with burn rate
-- **📈 PROJECTION** - Projected usage with limit warnings
-- **⚙️ MODELS** - Active models being used
-- **Real-time updates** every second
-- **Visual progress bars** with color coding
-- **Smart alerts** like "WILL EXCEED LIMIT"
+- **🟢 SESSION** - Progress through current 5-hour block with visual timeline
+- **🔥 USAGE** - Current token usage with live burn rate tracking
+- **📈 PROJECTION** - Projected usage with limit warnings ("WILL EXCEED LIMIT")
+- **⚙️ MODELS** - Active models being used in current session
+- **Real-time updates** every second with smooth animations
+- **Visual progress bars** with color coding (green → yellow → red)
+- **Smart alerts** and professional status indicators
 
 ## 🔧 Global Flags
 
 - `--output, -o` - Output format: table (default) or json
 - `--log-level` - Log level: debug, info, warn, error
-- `--offline` - Use local logs only (legacy flag, always local now)
+- `--offline` - Legacy flag (always local now)
 
 ## 💡 Examples
 
 ```bash
-# Beautiful daily report with colors
-cxusage daily
+# Beautiful daily report with responsive tables
+cx daily
 
-# Live monitoring with gorgeous dashboard
-cxusage blocks --live
+# Live monitoring with gorgeous full-screen dashboard  
+cx blocks --live
 
-# Monthly analysis with formatting
-cxusage monthly
+# Monthly analysis with professional formatting
+cx monthly
 
-# Check your setup
-cxusage validate
+# Check your setup and validate Codex CLI
+cx validate
 
-# See what cxusage can do
-cxusage demo
+# See all the beautiful output capabilities
+cx demo
 ```
 
 ## 🔮 How It Works
 
 1. **Codex CLI** stores usage data locally in `~/.codex/`
-2. **cxusage** reads these local files (no API key needed!)
-3. Aggregates data into reports and billing blocks
-4. Displays with beautiful formatting and colors
-5. Live mode monitors files for real-time updates
+2. **cx** reads these local files (no API key needed!)
+3. Aggregates data into reports and 5-hour billing blocks
+4. Displays with gorgeous responsive formatting and colors
+5. Live mode monitors files for real-time updates with stunning visuals
+
+## 🆚 vs ccusage
+
+| Feature | ccusage (Claude) | cx (Codex) |
+|---------|------------------|------------|
+| Data Source | `~/.config/claude/` | `~/.codex/` |
+| API Key | Not needed | Not needed |
+| Live Monitor | ✅ | ✅ |
+| 5-Hour Blocks | ✅ | ✅ |
+| Beautiful Output | ✅ | ✅ |
+| Responsive Design | ✅ | ✅ |
+| Theme-Adaptive | ✅ | ✅ |
+| Homebrew Install | ❌ | ✅ |
 
 ## 🤝 Contributing
 
@@ -228,16 +276,18 @@ cxusage demo
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Inspired by [ccusage](https://github.com/ryoppippi/ccusage) for Claude Code by [@ryoppippi](https://github.com/ryoppippi)
+- Inspired by [ccusage](https://github.com/ryoppippi/ccusage) for Claude Code by @ryoppippi
 - Built with [Cobra](https://github.com/spf13/cobra) CLI framework
-- Uses [tablewriter](https://github.com/olekukonko/tablewriter) for beautiful tables
-- Colors powered by [fatih/color](https://github.com/fatih/color)
+- Beautiful output powered by [Lipgloss](https://github.com/charmbracelet/lipgloss)
+- Professional table rendering with responsive design
 
 ---
 
