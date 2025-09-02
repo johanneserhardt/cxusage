@@ -327,4 +327,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Inspired by [ccusage](https://github.com/ryoppippi/ccusage)
 ---
 
-**Made with ❤️ for the OpenAI community**
+**Made with ❤️ for the [OpenAI](https://github.com/openai) community**
