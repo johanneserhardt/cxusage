@@ -55,14 +55,6 @@ cx daily
 cx blocks --live
 ```
 
-## 📋 Latest Release
-
-**Current Version:** [v0.1.0 (Upcoming)](releases/v0.1.0.md) - Initial release with gorgeous Lipgloss formatting and live monitoring
-
-📖 **[View All Releases](releases/README.md)** - Complete release history and notes
-
-🚀 **[Download Latest](https://github.com/johanneserhardt/cxusage/releases/latest)** - Get the newest version
-
 ## 📦 Installation
 
 ### 🍺 Homebrew (macOS/Linux) - Recommended
