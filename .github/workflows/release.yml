@@ -192,6 +192,8 @@ jobs:
           TAP_OWNER: johanneserhardt
           TAP_REPO: homebrew-tap
           TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
