@@ -213,9 +213,21 @@ jobs:
           git clone "https://x-access-token:${TAP_TOKEN}@github.com/${TAP_OWNER}/${TAP_REPO}.git" tap
           mkdir -p tap/Formula
 
-          # Use already computed checksums from previous step
+          # Download and compute checksums for tap formula
+          echo "⬇️ Downloading assets to compute checksums for tap..."
+          gh release download "$TAG_NAME" -p "cxusage-darwin-amd64" -O cxusage-darwin-amd64
+          gh release download "$TAG_NAME" -p "cxusage-darwin-arm64" -O cxusage-darwin-arm64
+          gh release download "$TAG_NAME" -p "cxusage-linux-amd64"  -O cxusage-linux-amd64
+          gh release download "$TAG_NAME" -p "cxusage-linux-arm64"  -O cxusage-linux-arm64
+
+          SHA_DARWIN_AMD64=$(sha256sum cxusage-darwin-amd64 | cut -d ' ' -f1)
+          SHA_DARWIN_ARM64=$(sha256sum cxusage-darwin-arm64 | cut -d ' ' -f1)
+          SHA_LINUX_AMD64=$(sha256sum  cxusage-linux-amd64  | cut -d ' ' -f1)
+          SHA_LINUX_ARM64=$(sha256sum  cxusage-linux-arm64  | cut -d ' ' -f1)
+
           FORMULA_PATH="tap/Formula/${FORMULA_NAME}.rb"
           VERSION_STR="${TAG_NAME#v}"
+          REPO="${{ github.repository }}"
 
           cat > "${FORMULA_PATH}.tmpl" <<'EOF'
           class CXFORMULA < Formula
@@ -257,7 +269,6 @@ jobs:
           end
           EOF
 
-          REPO="${{ github.repository }}"
           env REPO="$REPO" TAG_NAME="$TAG_NAME" VERSION_STR="$VERSION_STR" \
             FORMULA_NAME="$FORMULA_NAME" \
             SHA_DARWIN_AMD64="$SHA_DARWIN_AMD64" SHA_DARWIN_ARM64="$SHA_DARWIN_ARM64" \
