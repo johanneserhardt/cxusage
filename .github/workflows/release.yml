@@ -217,10 +217,10 @@ jobs:
 
           # Download and compute checksums for tap formula
           echo "⬇️ Downloading assets to compute checksums for tap..."
-          gh release download "$TAG_NAME" -p "cxusage-darwin-amd64" -O cxusage-darwin-amd64
-          gh release download "$TAG_NAME" -p "cxusage-darwin-arm64" -O cxusage-darwin-arm64
-          gh release download "$TAG_NAME" -p "cxusage-linux-amd64"  -O cxusage-linux-amd64
-          gh release download "$TAG_NAME" -p "cxusage-linux-arm64"  -O cxusage-linux-arm64
+          gh release download "$TAG_NAME" -R "${{ github.repository }}" -p "cxusage-darwin-amd64" -O cxusage-darwin-amd64
+          gh release download "$TAG_NAME" -R "${{ github.repository }}" -p "cxusage-darwin-arm64" -O cxusage-darwin-arm64
+          gh release download "$TAG_NAME" -R "${{ github.repository }}" -p "cxusage-linux-amd64"  -O cxusage-linux-amd64
+          gh release download "$TAG_NAME" -R "${{ github.repository }}" -p "cxusage-linux-arm64"  -O cxusage-linux-arm64
 
           SHA_DARWIN_AMD64=$(sha256sum cxusage-darwin-amd64 | cut -d ' ' -f1)
           SHA_DARWIN_ARM64=$(sha256sum cxusage-darwin-arm64 | cut -d ' ' -f1)
