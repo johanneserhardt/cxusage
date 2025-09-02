@@ -239,6 +239,83 @@ The `cx blocks --live` command provides a stunning real-time dashboard featuring
 - `--output, -o` - Output format: table (default) or json
 - `--log-level` - Log level: debug, info, warn, error
 
+## 🛠️ Troubleshooting
+
+### Homebrew Installation Issues
+
+**Problem:** Getting "example.invalid" download errors when installing via Homebrew
+```
+Error: cxusage: Failed to download resource "cxusage (0.0.0)"
+Download failed: https://example.invalid/cxusage-darwin-arm64
+```
+
+**Solution:** Homebrew is using a cached version of the old formula. Refresh the tap:
+```bash
+# Remove and re-add the tap to clear cache
+brew untap johanneserhardt/tap
+brew tap johanneserhardt/tap
+
+# Or force update the tap
+brew tap johanneserhardt/tap --force
+brew update
+
+# Then install
+brew install cxusage
+```
+
+### No Codex Usage Data Found
+
+**Problem:** cx shows "No Codex CLI usage data found"
+
+**Solutions:**
+```bash
+# Check if Codex CLI is properly set up
+cx validate
+
+# Verify Codex directory exists
+ls -la ~/.codex/
+
+# Use Codex CLI first to generate data, then run cx
+# After using Codex CLI, try again:
+cx daily
+cx blocks --live
+```
+
+### Live Dashboard Shows "Waiting for Activity"
+
+**Problem:** `cx blocks --live` shows waiting message despite recent Codex usage
+
+**Reasons:**
+- **No current active block** - Usage was in a previous 5-hour window
+- **Codex usage too old** - Activity more than 1 hour ago
+- **Different timezone** - Block times might seem off
+
+**Solutions:**
+```bash
+# Check all blocks to see your usage history
+cx blocks
+
+# Use Codex CLI now to create activity in current block
+# Then try live monitoring again:
+cx blocks --live
+```
+
+### Terminal Output Issues
+
+**Problem:** Tables look broken or colors don't display properly
+
+**Solutions:**
+```bash
+# Check terminal compatibility
+echo $TERM
+
+# Try without colors if needed
+NO_COLOR=1 cx daily
+
+# Ensure terminal supports Unicode
+cx demo  # Should show beautiful tables
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository
