@@ -127,10 +127,11 @@ jobs:
           gh release download "$TAG_NAME" -p "cxusage-linux-amd64"  -O cxusage-linux-amd64
           gh release download "$TAG_NAME" -p "cxusage-linux-arm64"  -O cxusage-linux-arm64
 
-          SHA_DARWIN_AMD64=$(shasum -a 256 cxusage-darwin-amd64 | awk '{print $1}')
-          SHA_DARWIN_ARM64=$(shasum -a 256 cxusage-darwin-arm64 | awk '{print $1}')
-          SHA_LINUX_AMD64=$(shasum -a 256 cxusage-linux-amd64  | awk '{print $1}')
-          SHA_LINUX_ARM64=$(shasum -a 256 cxusage-linux-arm64  | awk '{print $1}')
+          # Compute SHA256 (use sha256sum which is available on ubuntu-latest)
+          SHA_DARWIN_AMD64=$(sha256sum cxusage-darwin-amd64 | cut -d ' ' -f1)
+          SHA_DARWIN_ARM64=$(sha256sum cxusage-darwin-arm64 | cut -d ' ' -f1)
+          SHA_LINUX_AMD64=$(sha256sum  cxusage-linux-amd64  | cut -d ' ' -f1)
+          SHA_LINUX_ARM64=$(sha256sum  cxusage-linux-arm64  | cut -d ' ' -f1)
 
           cat > cxusage.rb.tmpl <<'RUBY'
           class Cxusage < Formula
@@ -186,13 +187,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Homebrew Tap
-        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true' && secrets.TAP_GITHUB_TOKEN != ''
+        env:
+          TAP_OWNER: johanneserhardt
+          TAP_REPO: homebrew-tap
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          TAP_OWNER="johanneserhardt"
-          TAP_REPO="homebrew-tap"
           FORMULA_NAME="cxusage"
 
           # Create temporary directory
@@ -200,7 +203,7 @@ jobs:
           cd "$workdir"
 
           echo "📥 Cloning tap repository: ${TAP_OWNER}/${TAP_REPO}"
-          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${TAP_OWNER}/${TAP_REPO}.git" tap
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${TAP_OWNER}/${TAP_REPO}.git" tap
           mkdir -p tap/Formula
 
           # Use already computed checksums from previous step
