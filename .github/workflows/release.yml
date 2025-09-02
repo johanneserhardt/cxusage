@@ -111,3 +111,67 @@ jobs:
           echo "🔗 View at: https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate and upload Homebrew formula (optional install via brew)
+        if: steps.validate_tag.outputs.valid == 'true' && steps.check_notes.outputs.notes_exist == 'true'
+        run: |
+          set -euo pipefail
+
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+
+          # Download built assets to compute SHA256 sums for Homebrew
+          gh release download "$TAG_NAME" -p "cxusage-darwin-amd64" -O cxusage-darwin-amd64
+          gh release download "$TAG_NAME" -p "cxusage-darwin-arm64" -O cxusage-darwin-arm64
+          gh release download "$TAG_NAME" -p "cxusage-linux-amd64"  -O cxusage-linux-amd64
+          gh release download "$TAG_NAME" -p "cxusage-linux-arm64"  -O cxusage-linux-arm64
+
+          SHA_DARWIN_AMD64=$(shasum -a 256 cxusage-darwin-amd64 | awk '{print $1}')
+          SHA_DARWIN_ARM64=$(shasum -a 256 cxusage-darwin-arm64 | awk '{print $1}')
+          SHA_LINUX_AMD64=$(shasum -a 256 cxusage-linux-amd64  | awk '{print $1}')
+          SHA_LINUX_ARM64=$(shasum -a 256 cxusage-linux-arm64  | awk '{print $1}')
+
+          cat > cxusage.rb <<'RUBY'
+          class Cxusage < Formula
+            desc "Codex CLI usage tracker with live dashboard"
+            homepage "https://github.com/#{ENV['GITHUB_REPOSITORY']}"
+            version "#{ENV['TAG_NAME']&.sub(/^v/, '') || '0.0.0'}"
+            license "MIT"
+
+            on_macos do
+              on_intel do
+                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-darwin-amd64", :using => :nounzip
+                sha256 "#{ENV['SHA_DARWIN_AMD64']}"
+              end
+              on_arm do
+                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-darwin-arm64", :using => :nounzip
+                sha256 "#{ENV['SHA_DARWIN_ARM64']}"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-linux-amd64", :using => :nounzip
+                sha256 "#{ENV['SHA_LINUX_AMD64']}"
+              end
+              on_arm do
+                url "https://github.com/#{ENV['GITHUB_REPOSITORY']}/releases/download/#{ENV['TAG_NAME']}/cxusage-linux-arm64", :using => :nounzip
+                sha256 "#{ENV['SHA_LINUX_ARM64']}"
+              end
+            end
+
+            def install
+              # Installed artifact is a single binary; install and provide short alias 'cx'
+              bin.install Dir["cxusage-*"][0] => "cxusage"
+              bin.install_symlink bin/"cxusage" => "cx"
+            end
+
+            test do
+              system "#{bin}/cxusage", "version"
+            end
+          end
+RUBY
+
+          # Upload formula to the release so users can brew install via a URL
+          gh release upload "$TAG_NAME" cxusage.rb --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
