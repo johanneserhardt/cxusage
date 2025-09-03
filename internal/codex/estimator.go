@@ -1,11 +1,11 @@
 package codex
 
 import (
-	"encoding/json"
-	"strings"
-	"unicode/utf8"
+    "encoding/json"
+    "strings"
+    "unicode/utf8"
 
-	"github.com/johanneserhardt/cxusage/internal/types"
+    "github.com/johanneserhardt/cxusage/internal/types"
 )
 
 // CodexMessage represents the structure of Codex CLI message data
@@ -26,14 +26,14 @@ type Content struct {
 
 // TokenEstimator provides token counting functionality for Codex CLI content
 type TokenEstimator struct {
-	// Estimation constants based on OpenAI's guidelines
-	CharactersPerToken float64
+    // Estimation constants based on OpenAI's guidelines
+    CharactersPerToken float64
 }
 
 // NewTokenEstimator creates a new token estimator
 func NewTokenEstimator() *TokenEstimator {
 	return &TokenEstimator{
-		CharactersPerToken: 4.0, // OpenAI's rough estimate: ~4 chars per token
+		CharactersPerToken: 1.5, // Adjusted based on real Codex CLI usage (8250/1290 ≈ 6.4x, so 4.0/6.4 ≈ 0.6, using 1.5 for safety)
 	}
 }
 
@@ -49,6 +49,11 @@ func (e *TokenEstimator) EstimateTokens(text string) int {
 	// Apply character-to-token ratio
 	tokenEstimate := float64(charCount) / e.CharactersPerToken
 	
+	// Apply overhead factor based on real Codex CLI usage patterns
+	// Accounts for system prompts, reasoning tokens, function calls, etc.
+	overheadFactor := 2.8 // Based on 8250/1290 ≈ 6.4x observed, but conservative
+	tokenEstimate *= overheadFactor
+	
 	// Round to nearest integer, minimum 1 for non-empty text
 	if tokenEstimate < 1 && charCount > 0 {
 		return 1
@@ -62,12 +67,12 @@ func (e *TokenEstimator) EstimateTokensFromMessage(msg CodexMessage) (inputToken
 	// Extract all text content from the message
 	var allText strings.Builder
 	
-	for _, content := range msg.Content {
-		if content.Type == "text" || content.Type == "output_text" || content.Type == "input_text" {
-			allText.WriteString(content.Text)
-			allText.WriteString(" ") // Add space between content blocks
-		}
-	}
+    for _, content := range msg.Content {
+        if strings.TrimSpace(content.Text) != "" {
+            allText.WriteString(content.Text)
+            allText.WriteString(" ")
+        }
+    }
 	
 	textContent := strings.TrimSpace(allText.String())
 	totalTokens := e.EstimateTokens(textContent)
@@ -115,15 +120,36 @@ func (e *TokenEstimator) EstimateCostFromTokens(model string, inputTokens, outpu
 
 // calculateCostSafely wraps cost calculation with error handling
 func calculateCostSafely(model string, usage types.Usage) (float64, error) {
-	// This will use the existing CalculateCost function from utils
-	// We'll need to import utils or move the calculation here
-	
-	// For now, use simple estimation based on gpt-4o pricing
-	// Input: $5 per 1M tokens, Output: $15 per 1M tokens
-	inputCost := float64(usage.PromptTokens) * 5.0 / 1000000
-	outputCost := float64(usage.CompletionTokens) * 15.0 / 1000000
-	
-	return inputCost + outputCost, nil
+    // Minimal per-model pricing table (fallbacks to gpt-4o baseline)
+    type rate struct{ inPerM, outPerM float64 }
+    pricing := map[string]rate{
+        // Known baseline (OpenAI public pricing, subject to change)
+        "gpt-4o":        {inPerM: 5.0, outPerM: 15.0},
+        "gpt-4o-mini":   {inPerM: 0.15, outPerM: 0.6},
+        "gpt-4":         {inPerM: 10.0, outPerM: 30.0},
+        "gpt-3.5-turbo": {inPerM: 0.5, outPerM: 1.5},
+    }
+
+    // Pick pricing by exact or prefix match, else fallback
+    r, ok := pricing[model]
+    if !ok {
+        // Try loose prefix match for variants like gpt-4o-mini-...
+        for k, v := range pricing {
+            if strings.HasPrefix(model, k) {
+                r = v
+                ok = true
+                break
+            }
+        }
+    }
+
+    if !ok {
+        r = pricing["gpt-4o"]
+    }
+
+    inputCost := float64(usage.PromptTokens) * r.inPerM / 1000000.0
+    outputCost := float64(usage.CompletionTokens) * r.outPerM / 1000000.0
+    return inputCost + outputCost, nil
 }
 
 // ParseCodexMessage parses a JSONL line into a Codex message

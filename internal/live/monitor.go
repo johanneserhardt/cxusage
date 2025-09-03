@@ -86,8 +86,8 @@ func (m *LiveMonitor) Stop() {
 
 // renderUpdate renders a single update of the live monitoring display
 func (m *LiveMonitor) renderUpdate() error {
-	// Clear screen and move cursor to top
-	fmt.Print("\033[2J\033[H")
+	// Move to top without clearing (reduces flicker)
+	fmt.Print("\033[H")
 	
 	// Get current time for display
 	now := time.Now()
@@ -214,7 +214,7 @@ func (m *LiveMonitor) setupTerminal() {
 	// Hide cursor
 	fmt.Print("\033[?25l")
 	
-	// Clear screen
+	// Clear screen once at start
 	fmt.Print("\033[2J\033[H")
 }
 

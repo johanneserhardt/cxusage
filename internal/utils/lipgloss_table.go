@@ -195,7 +195,7 @@ func FormatDailyUsageTableProper(dailyUsage []types.DailyUsage) {
 	}
 	
 	// Print title with border like ccusage
-	title := "Codex CLI Token Usage Report - Daily"
+	title := "Codex CLI Token Usage Report - Daily (~estimated)"
 	titleBorder := lipgloss.NewStyle().
 		BorderStyle(tableBorderStyle).
 		BorderForeground(primaryColor).
@@ -282,7 +282,7 @@ func FormatMonthlyUsageTableProper(monthlyUsage []types.MonthlyUsage) {
 	}
 	
 	// Print title with border
-	title := "Codex CLI Token Usage Report - Monthly"
+	title := "Codex CLI Token Usage Report - Monthly (~estimated)"
 	titleBorder := lipgloss.NewStyle().
 		BorderStyle(tableBorderStyle).
 		BorderForeground(primaryColor).

@@ -9,10 +9,11 @@ import (
 
 // AggregateDailyUsage aggregates usage entries into daily summaries
 func AggregateDailyUsage(entries []APIUsageEntry) []types.DailyUsage {
-	dailyMap := make(map[string]*types.DailyUsage)
+    dailyMap := make(map[string]*types.DailyUsage)
 
-	for _, entry := range entries {
-		date := time.Unix(entry.Created, 0).Format("2006-01-02")
+    for _, entry := range entries {
+        // Group by local calendar day for user-facing correctness
+        date := time.Unix(entry.Created, 0).In(time.Local).Format("2006-01-02")
 		
 		if _, exists := dailyMap[date]; !exists {
 			dailyMap[date] = &types.DailyUsage{
@@ -60,11 +61,12 @@ func AggregateDailyUsage(entries []APIUsageEntry) []types.DailyUsage {
 
 // AggregateMonthlyUsage aggregates usage entries into monthly summaries
 func AggregateMonthlyUsage(entries []APIUsageEntry) []types.MonthlyUsage {
-	monthlyMap := make(map[string]*types.MonthlyUsage)
+    monthlyMap := make(map[string]*types.MonthlyUsage)
 
-	for _, entry := range entries {
-		entryTime := time.Unix(entry.Created, 0)
-		month := entryTime.Format("2006-01")
+    for _, entry := range entries {
+        // Group by local calendar month for user-facing correctness
+        entryTime := time.Unix(entry.Created, 0).In(time.Local)
+        month := entryTime.Format("2006-01")
 		
 		if _, exists := monthlyMap[month]; !exists {
 			monthlyMap[month] = &types.MonthlyUsage{
@@ -98,13 +100,17 @@ func AggregateMonthlyUsage(entries []APIUsageEntry) []types.MonthlyUsage {
 	}
 
 	// Generate daily breakdown for each month
-	for month, monthly := range monthlyMap {
-		startTime, _ := time.Parse("2006-01", month)
-		endTime := startTime.AddDate(0, 1, 0).Add(-time.Second)
-		
-		monthEntries := filterEntriesByDateRange(entries, startTime, endTime)
-		monthly.DailyBreakdown = AggregateDailyUsage(monthEntries)
-	}
+    for month, monthly := range monthlyMap {
+        // Build local month bounds [start, end] inclusive
+        startTimeUTC, _ := time.Parse("2006-01", month)
+        // Convert bounds to local to align with local grouping
+        startLocal := time.Date(startTimeUTC.Year(), startTimeUTC.Month(), 1, 0, 0, 0, 0, time.Local)
+        // Inclusive end at last second of month in local time
+        endLocal := startLocal.AddDate(0, 1, 0).Add(-time.Second)
+
+        monthEntries := filterEntriesByDateRange(entries, startLocal, endLocal)
+        monthly.DailyBreakdown = AggregateDailyUsage(monthEntries)
+    }
 
 	// Convert map to sorted slice
 	var monthlyUsage []types.MonthlyUsage
@@ -185,14 +191,15 @@ func AggregateSessionUsage(entries []types.CodexUsageEntry) []types.SessionUsage
 
 // filterEntriesByDateRange filters usage entries by date range
 func filterEntriesByDateRange(entries []APIUsageEntry, startTime, endTime time.Time) []APIUsageEntry {
-	var filtered []APIUsageEntry
-	
-	for _, entry := range entries {
-		entryTime := time.Unix(entry.Created, 0)
-		if entryTime.After(startTime) && entryTime.Before(endTime) {
-			filtered = append(filtered, entry)
-		}
-	}
-	
-	return filtered
+    var filtered []APIUsageEntry
+    
+    for _, entry := range entries {
+        // Compare inclusively to avoid dropping boundary events
+        entryTime := time.Unix(entry.Created, 0)
+        if (entryTime.Equal(startTime) || entryTime.After(startTime)) && (entryTime.Equal(endTime) || entryTime.Before(endTime)) {
+            filtered = append(filtered, entry)
+        }
+    }
+    
+    return filtered
 }

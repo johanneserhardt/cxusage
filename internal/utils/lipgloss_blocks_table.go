@@ -18,7 +18,7 @@ func FormatBlocksTableProper(sessionBlocks []types.SessionBlock, tokenLimit *int
 	}
 	
 	// Print title with border
-	title := "Codex CLI Usage Blocks (5-hour periods)"
+	title := "Codex CLI Usage Blocks (~estimated, 5-hour periods)"
 	titleBorder := lipgloss.NewStyle().
 		BorderStyle(tableBorderStyle).
 		BorderForeground(primaryColor).

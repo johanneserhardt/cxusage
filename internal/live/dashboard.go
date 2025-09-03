@@ -41,8 +41,8 @@ func NewDashboardRenderer(tokenLimit int) *DashboardRenderer {
 
 // RenderFullDashboard renders the complete ccusage-style dashboard
 func (d *DashboardRenderer) RenderFullDashboard(block *types.SessionBlock, now time.Time) {
-	// Clear screen and move to top
-	fmt.Print("\033[2J\033[H")
+	// Move cursor to top without clearing (reduces flicker)
+	fmt.Print("\033[H")
 	
 	// Render header
 	d.renderHeader()
@@ -65,8 +65,8 @@ func (d *DashboardRenderer) RenderFullDashboard(block *types.SessionBlock, now t
 
 // RenderWaitingState renders the waiting state dashboard
 func (d *DashboardRenderer) RenderWaitingState(now time.Time) {
-	// Clear screen and move to top
-	fmt.Print("\033[2J\033[H")
+	// Move cursor to top without clearing (reduces flicker)
+	fmt.Print("\033[H")
 	
 	d.renderHeader()
 	
@@ -97,7 +97,7 @@ func (d *DashboardRenderer) RenderWaitingState(now time.Time) {
 
 // renderHeader renders the dashboard header
 func (d *DashboardRenderer) renderHeader() {
-    title := "CODEX CLI - LIVE TOKEN USAGE MONITOR"
+    title := "CODEX CLI - LIVE USAGE MONITOR (~estimated)"
     titleStyled := utils.BoldWhite(title)
     padding := (d.width - lipgloss.Width(titleStyled)) / 2
 	

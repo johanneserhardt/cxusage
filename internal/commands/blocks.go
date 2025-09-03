@@ -86,9 +86,9 @@ func runBlocks(cmd *cobra.Command, args []string) error {
 		endDate = time.Now()
 		startDate = endDate.AddDate(0, 0, -1)
 	} else {
-		// Default: last 7 days
+		// Default: last 3 days (better for timezone handling)
 		endDate = time.Now()
-		startDate = endDate.AddDate(0, 0, -7)
+		startDate = endDate.AddDate(0, 0, -3)
 	}
 	
 	logger.WithFields(map[string]interface{}{
