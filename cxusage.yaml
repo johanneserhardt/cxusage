@@ -1,4 +1,4 @@
 log_level: "warn"
 local_logging: false
 logs_dir: "logs"
-codex_path: "/Users/johanneserhardt/Projects/ccusage/.codex_test"
+# codex_path: "/Users/johanneserhardt/Projects/ccusage/.codex_test"  # Use default ~/.codex

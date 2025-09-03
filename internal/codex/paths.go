@@ -93,5 +93,11 @@ func GetUsageLogFiles(cfg *types.Config) ([]string, error) {
         collectJSONL(paths.ProjectsDir)
     }
 
+    // Check sessions directory (where Codex CLI actually stores files)
+    sessionsDir := filepath.Join(paths.ConfigDir, "sessions")
+    if stat, err := os.Stat(sessionsDir); err == nil && stat.IsDir() {
+        collectJSONL(sessionsDir)
+    }
+
     return files, nil
 }

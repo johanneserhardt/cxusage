@@ -28,8 +28,11 @@ func AggregateIntoBlocks(entries []types.CodexUsageEntry, sessionDurationHours i
 	blockMap := make(map[int64]*types.SessionBlock)
 
 	for _, entry := range entries {
+		// Convert UTC timestamp to local timezone for proper block assignment
+		localTimestamp := entry.Timestamp.Local()
+		
 		// Floor to the hour and then find the appropriate 5-hour block
-		blockStartTime := floorToBlockStart(entry.Timestamp, sessionDurationHours)
+		blockStartTime := floorToBlockStart(localTimestamp, sessionDurationHours)
 		blockKey := blockStartTime.Unix()
 
 		// Get or create block
@@ -68,9 +71,9 @@ func AggregateIntoBlocks(entries []types.CodexUsageEntry, sessionDurationHours i
 
 		block.ModelCosts[entry.Model] += entry.Cost
 
-		// Update actual end time
-		if block.ActualEndTime == nil || entry.Timestamp.After(*block.ActualEndTime) {
-			block.ActualEndTime = &entry.Timestamp
+		// Update actual end time (use local timestamp)
+		if block.ActualEndTime == nil || localTimestamp.After(*block.ActualEndTime) {
+			block.ActualEndTime = &localTimestamp
 		}
 	}
 
@@ -94,38 +97,35 @@ func AggregateIntoBlocks(entries []types.CodexUsageEntry, sessionDurationHours i
 		}
 	}
 	
-	// If no active block but we have recent usage, check if we should create a current active block
-	if !hasActiveBlock && len(blocks) > 0 {
-		latestBlock := blocks[len(blocks)-1]
-		// If the latest activity was less than 1 hour ago, consider creating a new active block
-		if latestBlock.ActualEndTime != nil && now.Sub(*latestBlock.ActualEndTime) < time.Hour {
-			// Create a new active block for the current time
-			currentBlockStart := floorToBlockStart(now, sessionDurationHours)
-			currentBlockEnd := currentBlockStart.Add(time.Duration(sessionDurationHours) * time.Hour)
-			
-			// Check if this would be a new block
-			newBlock := true
-			for i, existing := range blocks {
-				if existing.StartTime.Equal(currentBlockStart) {
-					// Update existing block to be active
+	// Always create a current active block for the current time window
+	if !hasActiveBlock {
+		currentBlockStart := floorToBlockStart(now, sessionDurationHours)
+		currentBlockEnd := currentBlockStart.Add(time.Duration(sessionDurationHours) * time.Hour)
+		
+		// Check if this block already exists in our data
+		blockExists := false
+		for i, existing := range blocks {
+			if existing.StartTime.Equal(currentBlockStart) {
+				// Update existing block to be active if it's in the current time window
+				if now.After(existing.StartTime) && now.Before(existing.EndTime) {
 					blocks[i].IsActive = true
-					blocks[i].EndTime = currentBlockEnd
-					newBlock = false
-					break
 				}
+				blockExists = true
+				break
 			}
-			
-			if newBlock {
-				activeBlock := types.SessionBlock{
-					StartTime:     currentBlockStart,
-					EndTime:       currentBlockEnd,
-					IsActive:      true,
-					ModelUsage:    make(map[string]types.Usage),
-					ModelCosts:    make(map[string]float64),
-					Models:        []string{},
-				}
-				blocks = append(blocks, activeBlock)
+		}
+		
+		// Create new active block if it doesn't exist and we're in a current time window
+		if !blockExists && now.After(currentBlockStart) && now.Before(currentBlockEnd) {
+			activeBlock := types.SessionBlock{
+				StartTime:     currentBlockStart,
+				EndTime:       currentBlockEnd,
+				IsActive:      true,
+				ModelUsage:    make(map[string]types.Usage),
+				ModelCosts:    make(map[string]float64),
+				Models:        []string{},
 			}
+			blocks = append(blocks, activeBlock)
 		}
 	}
 
