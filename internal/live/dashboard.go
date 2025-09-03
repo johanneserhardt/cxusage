@@ -39,10 +39,13 @@ func NewDashboardRenderer(tokenLimit int) *DashboardRenderer {
 	}
 }
 
-// RenderFullDashboard renders the complete ccusage-style dashboard
+// RenderFullDashboard renders the complete ccusage-style dashboard with dual views
 func (d *DashboardRenderer) RenderFullDashboard(block *types.SessionBlock, now time.Time) {
 	// Move cursor to top without clearing (reduces flicker)
 	fmt.Print("\033[H")
+	
+	// Extract project-specific data
+	projectData := ExtractProjectUsageData(block)
 	
 	// Render header
 	d.renderHeader()
@@ -50,10 +53,13 @@ func (d *DashboardRenderer) RenderFullDashboard(block *types.SessionBlock, now t
 	// Render session section
 	d.renderSessionSection(block, now)
 	
-	// Render usage section
-	d.renderUsageSection(block, now)
+	// Render global usage section
+	d.renderGlobalUsageSection(projectData.GlobalBlock, now)
 	
-	// Render projection section
+	// Render project-specific usage section
+	d.renderProjectUsageSection(projectData.ProjectBlock, projectData.ProjectName, now)
+	
+	// Render projection section (based on global data)
 	d.renderProjectionSection(block)
 	
 	// Render models section
@@ -159,8 +165,8 @@ func (d *DashboardRenderer) renderSessionSection(block *types.SessionBlock, now 
 	d.renderSectionBorder()
 }
 
-// renderUsageSection renders the token usage section
-func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now time.Time) {
+// renderGlobalUsageSection renders the global token usage section
+func (d *DashboardRenderer) renderGlobalUsageSection(block *types.SessionBlock, now time.Time) {
 	elapsed := now.Sub(block.StartTime)
 	burnRate := float64(block.TotalTokens) / elapsed.Minutes()
 	
@@ -190,8 +196,8 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 		status = "TRACKING"
 	}
 	
-	// Usage header
-	usageTitle := fmt.Sprintf("%s USAGE", UsageEmoji)
+	// Global usage header
+	usageTitle := fmt.Sprintf("%s USAGE (GLOBAL)", UsageEmoji)
 	usagePercentText := fmt.Sprintf("%.1f%% (%s/%s)", 
 		usagePercent,
 		utils.FormatNumber(block.TotalTokens),
@@ -223,11 +229,10 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 		statusColored = status
 	}
 	
-	usageDetails := fmt.Sprintf("Tokens: %s (Burn Rate: %s token/min ⚡ %s)  Limit: %s tokens  Cost: %s",
+	usageDetails := fmt.Sprintf("All Projects: %s tokens (Burn Rate: %s token/min ⚡ %s)  Cost: %s",
 		utils.FormatNumber(block.TotalTokens),
 		utils.Yellow(fmt.Sprintf("%.0f", burnRate)),
 		statusColored,
-		utils.FormatNumber(d.tokenLimit),
 		d.formatCost(block.TotalCost))
 	
 	if d.tokenLimit == 0 {
@@ -246,6 +251,90 @@ func (d *DashboardRenderer) renderUsageSection(block *types.SessionBlock, now ti
 	
 	// Usage progress bar
 	d.renderProgressBar(usagePercent/100, usageColorName, "USAGE")
+	
+	d.renderSectionBorder()
+}
+
+// renderProjectUsageSection renders the project-specific token usage section
+func (d *DashboardRenderer) renderProjectUsageSection(projectBlock *types.SessionBlock, projectName string, now time.Time) {
+	elapsed := now.Sub(projectBlock.StartTime)
+	var burnRate float64
+	if elapsed.Minutes() > 0 {
+		burnRate = float64(projectBlock.TotalTokens) / elapsed.Minutes()
+	}
+	
+	// Calculate project usage percentage
+	var usagePercent float64
+	var usageColorName string
+	var status string
+	
+	if d.tokenLimit > 0 {
+		usagePercent = float64(projectBlock.TotalTokens) / float64(d.tokenLimit) * 100
+		if usagePercent > 100 {
+			usageColorName = "red"
+			status = "HIGH"
+		} else if usagePercent > 50 {
+			usageColorName = "yellow"
+			status = "MODERATE"
+		} else {
+			usageColorName = "green"
+			status = "NORMAL"
+		}
+	} else {
+		usagePercent = math.Min(float64(projectBlock.TotalTokens) / 25000 * 100, 100)
+		usageColorName = "green"
+		status = "TRACKING"
+	}
+	
+	// Project usage header
+	displayName := GetProjectDisplayName(projectName, projectName)
+	usageTitle := fmt.Sprintf("🎯 USAGE (THIS PROJECT)")
+	usagePercentText := fmt.Sprintf("%.1f%% (%s/%s)", 
+		usagePercent,
+		utils.FormatNumber(projectBlock.TotalTokens),
+		utils.FormatNumber(d.tokenLimit))
+	
+	if d.tokenLimit == 0 {
+		usagePercentText = fmt.Sprintf("%s tokens", utils.FormatNumber(projectBlock.TotalTokens))
+	}
+	
+	headerPadding := d.width - len(stripColors(usageTitle)) - len(stripColors(usagePercentText)) - 2
+	if headerPadding < 0 {
+		headerPadding = 0
+	}
+	fmt.Printf("│ %s%s%s │\n", 
+		utils.BoldWhite(usageTitle),
+		strings.Repeat(" ", headerPadding),
+		utils.BoldWhite(usagePercentText))
+	
+	// Project usage details
+	var statusColored string
+	switch usageColorName {
+	case "red":
+		statusColored = utils.Red(status)
+	case "yellow":
+		statusColored = utils.Yellow(status)
+	case "green":
+		statusColored = utils.Green(status)
+	default:
+		statusColored = status
+	}
+	
+	usageDetails := fmt.Sprintf("%s/: %s tokens (Burn Rate: %s token/min ⚡ %s)  Cost: %s",
+		displayName,
+		utils.FormatNumber(projectBlock.TotalTokens),
+		utils.Yellow(fmt.Sprintf("%.0f", burnRate)),
+		statusColored,
+		d.formatCost(projectBlock.TotalCost))
+	
+	detailsPadding := d.width - len(stripColors(usageDetails)) - 2
+	if detailsPadding < 0 {
+		detailsPadding = 0
+	}
+	fmt.Printf("│ %s%s │\n", usageDetails, strings.Repeat(" ", detailsPadding))
+	
+	// Project usage progress bar
+	d.renderProgressBar(usagePercent/100, usageColorName, "PROJECT")
 	
 	d.renderSectionBorder()
 }
